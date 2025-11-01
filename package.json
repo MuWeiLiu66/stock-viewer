@@ -1,0 +1,266 @@
+{
+  "name": "stock-viewer",
+  "displayName": "股票查看器",
+  "description": "在 VS Code 状态栏实时监控股票行情（沪深A股5600+只、北交所）。核心功能：🔍智能搜索添加股票（支持中文名/编号模糊匹配）、🎨彩色显示（涨红跌绿）、⚙️自定义显示内容（名称/价格/涨跌幅可独立切换）、⌨️快捷键快速操作、📊悬停查看详细行情、⏸️智能更新控制（收盘停止/手动开关）、💾自动缓存股票数据库（7天有效期）。最多同时追踪7只股票，更新间隔可调（最小3秒）",
+  "version": "0.0.1",
+  "publisher": "MuWeiLiu",
+  "icon": "icons/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Leo-Wei105/stock-viewer.git"
+  },
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "stockViewer.refresh",
+        "title": "股票: 刷新数据",
+        "category": "Stock Viewer"
+      },
+      {
+        "command": "stockViewer.showDetails",
+        "title": "股票: 显示详细信息",
+        "category": "Stock Viewer"
+      },
+      {
+        "command": "stockViewer.toggleShowName",
+        "title": "股票: 切换显示名称",
+        "category": "Stock Viewer"
+      },
+      {
+        "command": "stockViewer.toggleShowPrice",
+        "title": "股票: 切换显示价格",
+        "category": "Stock Viewer"
+      },
+      {
+        "command": "stockViewer.toggleShowChangePercent",
+        "title": "股票: 切换显示涨跌幅",
+        "category": "Stock Viewer"
+      },
+      {
+        "command": "stockViewer.toggleColorfulDisplay",
+        "title": "股票: 切换彩色显示",
+        "category": "Stock Viewer"
+      },
+      {
+        "command": "stockViewer.searchAndAddStock",
+        "title": "股票: 搜索并添加",
+        "category": "Stock Viewer"
+      },
+      {
+        "command": "stockViewer.openSettings",
+        "title": "股票: 打开配置",
+        "category": "Stock Viewer"
+      },
+      {
+        "command": "stockViewer.switchDataSource",
+        "title": "股票: 切换数据源",
+        "category": "Stock Viewer"
+      },
+      {
+        "command": "stockViewer.reloadDatabase",
+        "title": "股票: 重新加载数据库",
+        "category": "Stock Viewer"
+      },
+      {
+        "command": "stockViewer.removeStock",
+        "title": "股票: 删除股票",
+        "category": "Stock Viewer"
+      },
+      {
+        "command": "stockViewer.toggleStopOnMarketClose",
+        "title": "股票: 切换收盘停止",
+        "category": "Stock Viewer"
+      },
+      {
+        "command": "stockViewer.toggleEnableAutoUpdate",
+        "title": "股票: 切换自动更新",
+        "category": "Stock Viewer"
+      },
+      {
+        "command": "stockViewer.toggleShowNotifications",
+        "title": "股票: 切换提示气泡",
+        "category": "Stock Viewer"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "stockViewer.refresh",
+        "key": "ctrl+shift+f5",
+        "mac": "cmd+shift+f5"
+      },
+      {
+        "command": "stockViewer.searchAndAddStock",
+        "key": "ctrl+shift+f6",
+        "mac": "cmd+shift+f6"
+      },
+      {
+        "command": "stockViewer.removeStock",
+        "key": "ctrl+shift+f7",
+        "mac": "cmd+shift+f7"
+      },
+      {
+        "command": "stockViewer.toggleShowName",
+        "key": "ctrl+shift+f9",
+        "mac": "cmd+shift+f9"
+      },
+      {
+        "command": "stockViewer.toggleShowPrice",
+        "key": "ctrl+shift+f10",
+        "mac": "cmd+shift+f10"
+      },
+      {
+        "command": "stockViewer.toggleShowChangePercent",
+        "key": "ctrl+shift+f11",
+        "mac": "cmd+shift+f11"
+      },
+      {
+        "command": "stockViewer.toggleColorfulDisplay",
+        "key": "ctrl+shift+f12",
+        "mac": "cmd+shift+f12"
+      }
+    ],
+    "configuration": {
+      "title": "股票查看器",
+      "properties": {
+        "stockViewer.stockCodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "order": 1,
+          "markdownDescription": "**基础配置** - 股票代码列表，支持中文名称、纯数字或完整代码。例如：`[\"平安银行\", \"000001\", \"sz000001\", \"sh600000\"]`（最多支持7只股票）",
+          "scope": "application",
+          "maxItems": 7
+        },
+        "stockViewer.dataSource": {
+          "type": "string",
+          "enum": [
+            "tencent",
+            "sina"
+          ],
+          "enumDescriptions": [
+            "腾讯财经",
+            "新浪财经"
+          ],
+          "default": "tencent",
+          "order": 2,
+          "markdownDescription": "**基础配置** - 数据源",
+          "scope": "application"
+        },
+        "stockViewer.showStockName": {
+          "type": "boolean",
+          "default": false,
+          "order": 10,
+          "markdownDescription": "**显示设置** - 在状态栏显示股票名称",
+          "scope": "application"
+        },
+        "stockViewer.showPrice": {
+          "type": "boolean",
+          "default": false,
+          "order": 11,
+          "markdownDescription": "**显示设置** - 在状态栏显示当前价格",
+          "scope": "application"
+        },
+        "stockViewer.showChangePercent": {
+          "type": "boolean",
+          "default": true,
+          "order": 12,
+          "markdownDescription": "**显示设置** - 在状态栏显示涨跌百分率",
+          "scope": "application"
+        },
+        "stockViewer.colorfulDisplay": {
+          "type": "boolean",
+          "default": true,
+          "order": 13,
+          "markdownDescription": "**显示设置** - 彩色显示（涨红色，跌绿色）",
+          "scope": "application"
+        },
+        "stockViewer.alignment": {
+          "type": "string",
+          "enum": [
+            "left",
+            "right"
+          ],
+          "enumDescriptions": [
+            "显示在状态栏左侧",
+            "显示在状态栏右侧"
+          ],
+          "default": "right",
+          "order": 14,
+          "markdownDescription": "**显示设置** - 状态栏显示位置",
+          "scope": "application"
+        },
+        "stockViewer.enableAutoUpdate": {
+          "type": "boolean",
+          "default": true,
+          "order": 20,
+          "markdownDescription": "**更新设置** - 启用自动更新（关闭后将停止所有自动数据更新）",
+          "scope": "application"
+        },
+        "stockViewer.updateInterval": {
+          "type": "number",
+          "default": 8,
+          "minimum": 3,
+          "order": 21,
+          "markdownDescription": "**更新设置** - 更新间隔（秒），最小值为 3 秒",
+          "scope": "application"
+        },
+        "stockViewer.stopOnMarketClose": {
+          "type": "boolean",
+          "default": false,
+          "order": 22,
+          "markdownDescription": "**更新设置** - 收盘时间停止请求（开启后，在非交易时间段自动暂停数据更新）\n\n交易时间：周一至周五 9:30-11:30, 13:00-15:00",
+          "scope": "application"
+        },
+        "stockViewer.showNotifications": {
+          "type": "boolean",
+          "default": false,
+          "order": 30,
+          "markdownDescription": "**通知设置** - 操作时是否显示提示气泡（如切换显示、添加股票等）",
+          "scope": "application"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "build": "npm run compile",
+    "clean": "rimraf out *.vsix",
+    "prepublishOnly": "npm run clean && npm run build",
+    "package": "npm run build && vsce package",
+    "publish": "npm run build && vsce publish",
+    "version:patch": "npm version patch --no-git-tag-version",
+    "version:minor": "npm version minor --no-git-tag-version",
+    "version:major": "npm version major --no-git-tag-version",
+    "package:patch": "npm version patch --no-git-tag-version && npm run package",
+    "package:minor": "npm version minor --no-git-tag-version && npm run package",
+    "package:major": "npm version major --no-git-tag-version && npm run package",
+    "publish:patch": "npm run build && vsce publish patch",
+    "publish:minor": "npm run build && vsce publish minor",
+    "publish:major": "npm run build && vsce publish major"
+  },
+  "devDependencies": {
+    "@types/node": "^20.x",
+    "@types/vscode": "^1.74.0",
+    "@vscode/vsce": "^2.32.0",
+    "typescript": "^5.8.3",
+    "rimraf": "^5.0.5"
+  },
+  "dependencies": {
+    "iconv-lite": "^0.6.0"
+  }
+}

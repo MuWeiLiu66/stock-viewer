@@ -1,0 +1,29 @@
+# 开发配置
+.vscode/**
+.vscode-test/**
+.git/**
+.gitignore
+.DS_Store
+
+# 源代码
+src/**
+**/*.ts
+
+# 构建配置
+tsconfig.json
+**/*.map
+
+# 文档（开发用）
+API_DATA_FORMAT.md
+USAGE_GUIDE.md
+
+# 打包文件
+*.vsix
+
+# 日志和临时文件
+*.log
+
+# 注意：不要忽略整个 node_modules，因为扩展依赖 iconv-lite 等运行时依赖
+# vsce 会自动处理，只打包 dependencies，排除 devDependencies
+
+.cursor/**

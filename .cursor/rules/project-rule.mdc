@@ -1,0 +1,195 @@
+---
+alwaysApply: true
+---
+# Stock Viewer 项目规则
+
+## 📝 文档更新规范
+
+### 强制要求
+每次有功能更新、改动时，必须同步更新以下文件：
+
+1. **package.json**
+   - `description` 字段：简短描述新功能（如果是重要功能）
+   - `version` 字段：根据语义化版本规范更新
+   - `commands` 部分：新增命令时添加相应配置
+   - `configuration` 部分：新增配置项时添加完整定义（包括 order、markdownDescription）
+
+2. **README.md**
+   - **核心特性**：新增重要功能时更新特性列表
+   - **快捷键**：新增快捷键时更新快捷键表格
+   - **主要配置**：新增配置项时更新对应分组的配置表格
+   - **使用技巧**：新功能有使用技巧时添加说明
+   - **常见问题**：预判用户可能的疑问并添加 Q&A
+
+### 禁止行为
+❌ **不要生成临时性的总结文档**，例如：
+- `FEATURE_UPDATE.md`
+- `NOTIFICATIONS_SUMMARY.md`
+- `SETTINGS_STRUCTURE.md`
+- `DOCUMENTATION_UPDATE.md`
+- 其他类似的临时 `.md` 文件
+
+✅ **原因**：
+- 临时文档容易过期，造成信息不一致
+- 增加仓库维护负担
+- 所有说明都应该整合到 README.md 中
+
+## 🏗️ 代码开发规范
+
+### 配置项开发流程
+1. 在 `src/config.ts` 中：
+   - 更新 `StockViewerConfig` 接口
+   - 在 `ConfigManager.get()` 中添加读取逻辑
+   - 添加相应的 toggle 或 update 方法（如需要）
+
+2. 在 `package.json` 中：
+   - 在 `configuration.properties` 添加配置定义
+   - 设置合适的 `order` 值（按功能分组）
+   - 使用 `markdownDescription` 并添加分组标识
+   - 添加相应的命令（如需要）
+
+3. 在实现代码中应用配置
+
+4. 同步更新 README.md
+
+### 命令开发流程
+1. 在 `package.json` 中注册命令
+2. 在 `src/extension.ts` 中实现命令处理
+3. 添加合适的用户提示（使用 `showNotification`）
+4. 如需快捷键，在 `package.json` 的 `keybindings` 中添加
+5. 更新 README.md 的快捷键表格（如有快捷键）
+
+### 提示气泡规范
+- 所有用户操作都应该有反馈
+- 使用 `showNotification()` 函数统一管理
+- 提示信息简洁明了
+- 打开设置界面、显示详情面板等自带反馈的操作除外
+
+## 📊 配置分组规范
+
+package.json 中的配置项按以下顺序分组：
+
+```
+基础配置 (Order: 1-9)
+├── stockCodes (1)
+└── dataSource (2)
+
+显示设置 (Order: 10-19)
+├── showStockName (10)
+├── showPrice (11)
+├── showChangePercent (12)
+├── colorfulDisplay (13)
+└── alignment (14)
+
+更新设置 (Order: 20-29)
+├── enableAutoUpdate (20)
+├── updateInterval (21)
+└── stopOnMarketClose (22)
+
+通知设置 (Order: 30-39)
+└── showNotifications (30)
+
+其他设置 (Order: 40+)
+└── 预留给未来功能
+```
+
+### 配置项格式
+```json
+"stockViewer.newConfig": {
+  "type": "boolean",
+  "default": false,
+  "order": 23,
+  "markdownDescription": "**分组名称** - 配置说明",
+  "scope": "application"
+}
+```
+
+## 📖 README.md 结构规范
+
+保持以下章节结构：
+
+```markdown
+# 标题和徽章
+## 💭 设计理念
+## ✨ 核心特性
+## 🚀 快速开始
+## ⌨️ 快捷键
+## ⚙️ 主要配置
+  ### 基础配置
+  ### 显示设置
+  ### 更新设置
+  ### 通知设置
+## 🎨 自定义图标
+## 📝 股票代码格式
+## 💡 使用技巧
+  ### 保持专注的最佳实践
+  ### [具体功能使用技巧]
+## ❓ 常见问题
+## 📄 许可证
+## 🔗 相关链接
+```
+
+### 更新原则
+- 新增功能时，在合适的章节添加说明
+- 保持章节结构的一致性
+- 使用表格、列表等格式提高可读性
+- 提供具体的使用示例和场景
+
+## 🧪 开发检查清单
+
+每次功能开发完成后，检查：
+
+- [ ] TypeScript 编译通过
+- [ ] 无 linter 错误
+- [ ] 新增配置项已添加到 package.json
+- [ ] 新增配置项已添加到 README.md 对应分组
+- [ ] 新增命令已注册并实现
+- [ ] 用户操作有适当的提示反馈
+- [ ] README.md 核心特性列表已更新（如需要）
+- [ ] README.md 常见问题已更新（如需要）
+- [ ] 没有生成临时的 .md 文件
+
+## 💡 最佳实践
+
+### 功能命名
+- 配置项：使用驼峰命名，如 `enableAutoUpdate`
+- 命令：使用点号分隔，如 `stockViewer.toggleFeature`
+- 命令标题：使用中文，如 "切换自动更新"
+
+### 默认值选择
+- 功能开关：考虑用户体验，默认值应该是最合适的状态
+- 更新间隔：默认适中的值，避免过于频繁
+- 提示开关：默认关闭，避免打扰用户
+
+### 文档编写
+- 使用清晰的标题和分组
+- 提供具体的使用场景
+- 包含默认值和可选值
+- 解释为什么要这样设计
+
+## 🔄 版本更新规范
+
+遵循语义化版本（Semantic Versioning）：
+
+- **主版本号（Major）**：不兼容的 API 修改
+- **次版本号（Minor）**：向下兼容的功能性新增
+- **修订号（Patch）**：向下兼容的问题修正
+
+示例：
+- 新增功能：0.0.1 -> 0.1.0
+- 修复 bug：0.1.0 -> 0.1.1
+- 重大重构：0.1.1 -> 1.0.0
+
+更新版本后，同步更新 README.md 中的版本徽章。
+
+## 🎯 目标
+
+通过遵循这些规则：
+- ✅ 保持文档与代码的一致性
+- ✅ 减少维护负担
+- ✅ 提供清晰的用户指南
+- ✅ 保持代码库整洁
+- ✅ 提升开发效率
+
+## 生成Commit Message
+- 使用中文
