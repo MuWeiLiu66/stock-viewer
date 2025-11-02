@@ -260,7 +260,5 @@
     "typescript": "^5.8.3",
     "rimraf": "^5.0.5"
   },
-  "dependencies": {
-    "iconv-lite": "^0.6.0"
-  }
+  "dependencies": {}
 }

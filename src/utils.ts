@@ -1,6 +1,5 @@
 import * as http from 'http';
 import * as https from 'https';
-import * as iconv from 'iconv-lite';
 
 // 常量定义
 export const CACHE_EXPIRY_DAYS = 7;
@@ -54,8 +53,12 @@ export async function httpGet(url: string, headers?: http.OutgoingHttpHeaders): 
             res.on('end', () => {
                 const buffer = Buffer.concat(chunks);
                 try {
-                    resolve(iconv.decode(buffer, 'gbk'));
+                    // 使用 Node.js 内置的 TextDecoder (支持 GBK，Node.js 14.5.0+)
+                    // VS Code 使用 Node.js 18+，完全支持
+                    const decoder = new TextDecoder('gbk');
+                    resolve(decoder.decode(buffer));
                 } catch {
+                    // 如果 GBK 解码失败，尝试 UTF-8
                     resolve(buffer.toString('utf-8'));
                 }
             });

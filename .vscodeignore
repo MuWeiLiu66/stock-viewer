@@ -23,7 +23,8 @@ USAGE_GUIDE.md
 # 日志和临时文件
 *.log
 
-# 注意：不要忽略整个 node_modules，因为扩展依赖 iconv-lite 等运行时依赖
-# vsce 会自动处理，只打包 dependencies，排除 devDependencies
+# 注意：vsce 会自动处理，只打包 dependencies，排除 devDependencies
+# 现在没有运行时依赖，所以 node_modules 会被完全排除
 
+# IDE 配置
 .cursor/**
