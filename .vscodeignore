@@ -28,3 +28,6 @@ USAGE_GUIDE.md
 
 # IDE 配置
 .cursor/**
+
+# 开发配置文件
+.nvmrc

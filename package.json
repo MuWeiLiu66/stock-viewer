@@ -235,8 +235,9 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
+    "vscode:prepublish": "npm run compile && npm run minify",
     "compile": "tsc -p ./",
+    "minify": "node scripts/minify.js",
     "watch": "tsc -watch -p ./",
     "build": "npm run compile",
     "clean": "rimraf out *.vsix",
@@ -258,7 +259,8 @@
     "@types/vscode": "^1.74.0",
     "@vscode/vsce": "^2.32.0",
     "typescript": "^5.8.3",
-    "rimraf": "^5.0.5"
+    "rimraf": "^5.0.5",
+    "terser": "^5.36.0"
   },
   "dependencies": {}
 }
