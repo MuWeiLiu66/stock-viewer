@@ -1,8 +1,23 @@
 # Exclude test sources and configs from VS Code extension package
+
+# Dependencies and lock files
 node_modules/
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Git and IDE files
 .git/
 .vscode/
-coverage/
+.DS_Store
+
+# TypeScript source files (only compiled output is needed)
+src/**
+
+# Build scripts
+scripts/
+
+# Test files and directories
 tests/**
 **/__mocks__/**
 **/__tests__/**
@@ -15,7 +30,21 @@ tests/**
 **/*.spec.js
 **/setup.ts
 **/setup.js
+
+# Test coverage reports
+coverage/
+
+# Development configuration files
 jest.config.js
 tsconfig.json
+
+# Development documentation
 API_DATA_FORMAT.md
 USAGE_GUIDE.md
+
+# Source maps (optional, exclude to reduce package size)
+out/**/*.map
+
+# Packaged extension files
+*.vsix
+

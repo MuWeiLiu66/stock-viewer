@@ -2,7 +2,6 @@
 
 在 VS Code 状态栏实时显示股票涨跌幅，支持智能搜索添加和快捷键操作。
 
-[![Version](https://img.shields.io/badge/version-0.0.5-blue.svg)](https://github.com/Leo-Wei105/stock-viewer)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Issues](https://img.shields.io/github/issues/Leo-Wei105/stock-viewer)](https://github.com/Leo-Wei105/stock-viewer/issues)
 
@@ -27,7 +26,7 @@
 - ⚡ **快捷操作** - 常用功能配置快捷键
 - 📈 **详细信息** - 悬停显示完整行情数据
 - ⏸️ **智能更新** - 支持收盘时间自动停止、手动控制更新开关
-- 🌍 **多市场支持** - 支持A股、港股、美股、指数、ETF（共13000+只）
+- 🌍 **多市场支持** - 覆盖沪深 A 股、北交所、港股、美股、指数、ETF 等市场
 - 🕐 **实时时间戳** - 显示API返回的实际数据更新时间
 - 📅 **智能交易日判断** - 基于数据时间戳自动识别交易日和节假日
 
@@ -308,7 +307,7 @@ A: 只需添加股票代码即可，推荐使用搜索功能（`Ctrl+Shift+F6`�
 A: 按 `Ctrl+Shift+F7`（Mac: `Cmd+Shift+F7`），从列表中选择要删除的股票即可
 
 **Q: 支持哪些股票？**  
-A: 支持沪深A股（约5600+只）、北交所、港股（10000+只）、美股（常见股票130+只）、指数（40+个）、ETF（510段、562段、588段、159段），自动缓存7天
+A: 支持沪深 A 股、北交所、港股、美股、指数、ETF 等多个市场，自动缓存 7 天
 
 **Q: 数据多久更新一次？**  
 A: 默认8秒，可在设置中调整（范围：3秒-30分钟）
