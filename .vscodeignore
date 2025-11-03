@@ -1,33 +1,21 @@
-# 开发配置
-.vscode/**
-.vscode-test/**
-.git/**
-.gitignore
-.DS_Store
-
-# 源代码
-src/**
-**/*.ts
-
-# 构建配置
+# Exclude test sources and configs from VS Code extension package
+node_modules/
+.git/
+.vscode/
+coverage/
+tests/**
+**/__mocks__/**
+**/__tests__/**
+**/*.test.ts
+**/*.test.tsx
+**/*.test.js
+**/*.test.js.map
+**/*.spec.ts
+**/*.spec.tsx
+**/*.spec.js
+**/setup.ts
+**/setup.js
+jest.config.js
 tsconfig.json
-**/*.map
-
-# 文档（开发用）
 API_DATA_FORMAT.md
 USAGE_GUIDE.md
-
-# 打包文件
-*.vsix
-
-# 日志和临时文件
-*.log
-
-# 注意：vsce 会自动处理，只打包 dependencies，排除 devDependencies
-# 现在没有运行时依赖，所以 node_modules 会被完全排除
-
-# IDE 配置
-.cursor/**
-
-# 开发配置文件
-.nvmrc

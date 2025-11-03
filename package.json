@@ -257,15 +257,20 @@
     "package:major": "npm version major --no-git-tag-version && npm run package",
     "publish:patch": "npm run build && vsce publish patch",
     "publish:minor": "npm run build && vsce publish minor",
-    "publish:major": "npm run build && vsce publish major"
+    "publish:major": "npm run build && vsce publish major",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
     "@types/node": "^20.x",
     "@types/vscode": "^1.74.0",
     "@vscode/vsce": "^2.32.0",
-    "typescript": "^5.8.3",
+    "jest": "^30.2.0",
     "rimraf": "^5.0.5",
-    "terser": "^5.36.0"
-  },
-  "dependencies": {}
+    "terser": "^5.36.0",
+    "ts-jest": "^29.4.5",
+    "typescript": "^5.8.3"
+  }
 }

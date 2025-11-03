@@ -253,6 +253,52 @@ cp /path/to/your/icon.png icons/icon.png
 - 从列表中选择要删除的股票
 - 显示当前价格和涨跌幅，方便确认
 
+## 🧪 开发与测试
+
+本项目包含完整的单元测试，确保功能稳定可靠。
+
+### 运行测试
+
+```bash
+# 运行所有测试
+npm test
+
+# 监听模式运行测试（开发时推荐）
+npm run test:watch
+
+# 生成测试覆盖率报告
+npm run test:coverage
+```
+
+### 测试覆盖
+
+- ✅ **utils.ts** - 工具函数测试（格式化、市场时间判断等）
+- ✅ **config.ts** - 配置管理测试（代码验证、配置更新等）
+- ✅ **stockDataService.ts** - 数据服务测试（数据解析、格式化等）
+- ✅ **statusBarManager.ts** - 状态栏管理测试（显示逻辑、更新机制等）
+
+### 测试结构
+
+```
+tests/
+├── __mocks__/          # Mock 文件（VS Code API等）
+│   └── vscode.ts
+├── setup.ts            # 测试设置文件
+├── utils.test.ts       # 工具函数测试
+├── config.test.ts      # 配置管理测试
+├── stockDataService.test.ts  # 数据服务测试
+└── statusBarManager.test.ts  # 状态栏管理测试
+```
+
+### 编写新测试
+
+添加新功能时，请确保：
+
+1. 为新功能编写对应的单元测试
+2. 测试覆盖核心逻辑和边界情况
+3. 运行 `npm test` 确保所有测试通过
+4. 检查测试覆盖率报告，确保覆盖率不低于现有水平
+
 ## ❓ 常见问题
 
 **Q: 首次使用需要配置什么？**  
