@@ -123,6 +123,12 @@ class StockViewer {
 
     public refresh(): void {
         this.updateStatusBar();
+        // 刷新后重新检查是否需要启动定时器
+        const config = this.configManager.get();
+        if (config.enableAutoUpdate && !this.updateTimer) {
+            // 如果自动更新已启用但没有定时器，尝试重新启动
+            this.start();
+        }
     }
 
     public start(): void {
@@ -137,7 +143,30 @@ class StockViewer {
         const config = this.configManager.get();
         // 只有启用自动更新时才设置定时器
         if (config.enableAutoUpdate) {
+            // 如果启用了收盘时间停止更新，且当前不在交易时间，则不设置定时器
+            if (config.stopOnMarketClose && !isMarketOpen()) {
+                // 不设置定时器，避免非交易时间时的无效更新
+                return;
+            }
+            
             this.updateTimer = setInterval(() => {
+                const currentConfig = this.configManager.get();
+                // 在定时器回调中再次检查：如果启用了收盘时间停止更新，且当前不在交易时间，则清除定时器
+                if (currentConfig.stopOnMarketClose && !isMarketOpen()) {
+                    if (this.updateTimer) {
+                        clearInterval(this.updateTimer);
+                        this.updateTimer = undefined;
+                    }
+                    return;
+                }
+                // 如果禁用了自动更新，也清除定时器
+                if (!currentConfig.enableAutoUpdate) {
+                    if (this.updateTimer) {
+                        clearInterval(this.updateTimer);
+                        this.updateTimer = undefined;
+                    }
+                    return;
+                }
                 this.updateStatusBar();
             }, Math.max(config.updateInterval, MIN_UPDATE_INTERVAL));
         }
