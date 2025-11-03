@@ -41,15 +41,23 @@ export class ConfigManager {
     public async addStockCode(code: string): Promise<{ success: boolean; message?: string }> {
         // 验证代码格式
         if (!this.isValidStockCode(code)) {
-            return { success: false, message: '股票代码格式无效，请输入6位数字、完整代码（如sz000001）或中文名称' };
+            return { 
+                success: false, 
+                message: '股票代码格式无效。支持的格式：\n- A股：sz000001, sh600000, bj920001 或 6位数字\n- 港股：hk00700（5位数字）\n- 美股：us.AAPL\n- 中文名称' 
+            };
         }
         
         const config = this.get();
         const trimmedCode = code.trim();
         
-        // 检查是否重复（忽略大小写）
+        // 规范化代码用于比较（统一转换为小写）
         const normalizedCode = trimmedCode.toLowerCase();
-        if (config.stockCodes.some(c => c.toLowerCase() === normalizedCode)) {
+        
+        // 检查是否重复（使用规范化比较）
+        if (config.stockCodes.some(c => {
+            const normalized = c.toLowerCase();
+            return normalized === normalizedCode;
+        })) {
             return { success: false, message: '股票已在列表中' };
         }
         
@@ -138,14 +146,20 @@ export class ConfigManager {
         }
         
         // 允许的格式：
-        // 1. 完整代码：sz000001, sh600000, bj920001
-        // 2. 6位纯数字：000001, 600000, 920001
-        // 3. 中文名称（至少2个字符，最多20个字符）
-        const fullCodePattern = /^(sz|sh|bj)\d{6}$/i;
+        // 1. A股完整代码：sz000001, sh600000, bj920001
+        // 2. 港股代码：hk00700, hk09988（5位数字）
+        // 3. 美股代码：us.AAPL, us.BRK.A（标准格式）
+        // 4. 6位纯数字：000001, 600000, 920001（A股）
+        // 5. 中文名称（至少2个字符，最多20个字符）
+        const aStockPattern = /^(sz|sh|bj)\d{6}$/i;
+        const hkStockPattern = /^hk\d{5}$/i;
+        const usStockPattern = /^us\.[A-Z0-9]+(?:\.[A-Z]+)?$/i;
         const numberPattern = /^\d{6}$/;
         const chinesePattern = /^[\u4e00-\u9fa5]{2,20}$/;
         
-        return fullCodePattern.test(trimmed) || 
+        return aStockPattern.test(trimmed) || 
+               hkStockPattern.test(trimmed) ||
+               usStockPattern.test(trimmed) ||
                numberPattern.test(trimmed) || 
                chinesePattern.test(trimmed);
     }

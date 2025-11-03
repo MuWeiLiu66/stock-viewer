@@ -5,7 +5,7 @@ import { StockItem, fetchAllStocks } from './stockDatabase';
 import { ConfigManager } from './config';
 import { StockDataService, StockInfo } from './stockDataService';
 import { StatusBarManager } from './statusBarManager';
-import { formatVolume, formatTurnover, formatChangePercent, formatChangeAmount, getStockPrefix, MIN_UPDATE_INTERVAL, CACHE_EXPIRY_DAYS, MIN_EXPECTED_STOCKS, isMarketOpen } from './utils';
+import { formatVolume, formatVolumeByCode, formatTurnover, formatChangePercent, formatChangeAmount, getStockPrefix, MIN_UPDATE_INTERVAL, CACHE_EXPIRY_DAYS, MIN_EXPECTED_STOCKS, isMarketOpen } from './utils';
 
 interface StockQuickPickItem extends vscode.QuickPickItem {
     stock: StockItem | null;
@@ -417,7 +417,12 @@ function registerCommands(context: vscode.ExtensionContext) {
             });
 
             if (selected) {
-                const newCodes = config.stockCodes.filter(code => code !== selected.code);
+                // 使用规范化比较，确保删除时能正确匹配（考虑大小写）
+                const selectedNormalized = normalizeStockCodes([selected.code])[0];
+                const newCodes = config.stockCodes.filter(code => {
+                    const normalized = normalizeStockCodes([code])[0];
+                    return normalized !== selectedNormalized && code !== selected.code;
+                });
                 await configManager.updateStockCodes(newCodes);
                 showNotification(`已删除股票: ${selected.label} (${selected.code})`);
             }
@@ -460,17 +465,32 @@ function normalizeStockCodes(codes: string[]): string[] {
         const trimmed = code.trim();
         if (!trimmed) continue;
         
+        // A股代码：sz000001, sh600000, bj920001
         if (trimmed.match(/^(sz|sh|bj)\d{6}$/i)) {
             normalized.push(trimmed.toLowerCase());
             continue;
         }
         
+        // 港股代码：hk00700, hk09988（5位数字）
+        if (trimmed.match(/^hk\d{5}$/i)) {
+            normalized.push(trimmed.toLowerCase());
+            continue;
+        }
+        
+        // 美股代码：us.AAPL, us.BRK.A
+        if (trimmed.match(/^us\.[A-Z0-9]+(?:\.[A-Z]+)?$/i)) {
+            normalized.push(trimmed.toLowerCase());
+            continue;
+        }
+        
+        // 6位纯数字（A股）
         if (trimmed.match(/^\d{6}$/)) {
             const num = parseInt(trimmed);
             normalized.push(`${getStockPrefix(num)}${trimmed}`);
             continue;
         }
         
+        // 中文名称搜索
         if (/[\u4e00-\u9fa5]/.test(trimmed)) {
             if (stockDatabaseLoaded && stockDatabase.length > 0) {
                 const results = searchStocks(trimmed);
@@ -482,6 +502,7 @@ function normalizeStockCodes(codes: string[]): string[] {
             console.warn(`无法找到股票代码: ${trimmed}`);
         }
         
+        // 其他格式直接保留（可能是不常见的格式）
         normalized.push(trimmed);
     }
     
@@ -572,7 +593,7 @@ function showStockDetails(stocks: StockInfo[]): void {
                     </div>
                     <div class="info-row">
                         <span class="label">成交量</span>
-                        <span class="value">${formatVolume(stock.volume)}</span>
+                        <span class="value">${formatVolumeByCode(stock.volume, stock.code)}</span>
                     </div>
                     <div class="info-row">
                         <span class="label">成交额</span>
@@ -601,7 +622,7 @@ function showStockDetails(stocks: StockInfo[]): void {
                     <td>${stock.todayOpen.toFixed(2)}</td>
                     <td>${stock.todayHigh.toFixed(2)}</td>
                     <td>${stock.todayLow.toFixed(2)}</td>
-                    <td>${formatVolume(stock.volume)}</td>
+                    <td>${formatVolumeByCode(stock.volume, stock.code)}</td>
                     <td>${formatTurnover(stock.turnover)}</td>
                     <td class="update-time-cell">${stock.updateTime}</td>
                 </tr>

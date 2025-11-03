@@ -33,7 +33,71 @@ export const CODE_RANGES = {
     ],
     BEIJING: [
         { name: '北交所920段', start: 920000, end: 920999 },
-    ]
+    ],
+    // 指数代码列表（常见指数）
+    INDICES: [
+        // 上海指数
+        'sh000001', // 上证指数
+        'sh000002', // A股指数
+        'sh000003', // B股指数
+        'sh000008', // 综合指数
+        'sh000009', // 上证380
+        'sh000010', // 上证180
+        'sh000016', // 上证50
+        'sh000017', // 新综指
+        'sh000300', // 沪深300
+        'sh000688', // 科创50
+        'sh000852', // 中证1000
+        'sh000905', // 中证500
+        'sh000906', // 中证800
+        'sh000985', // 中证全指
+        // 深圳指数
+        'sz399001', // 深证成指
+        'sz399002', // 深成指R
+        'sz399003', // 深证B指
+        'sz399004', // 深证100R
+        'sz399005', // 中小板指
+        'sz399006', // 创业板指
+        'sz399007', // 深证300
+        'sz399008', // 中小300
+        'sz399010', // 深证700
+        'sz399011', // 深证1000
+        'sz399012', // 创业300
+        'sz399013', // 深证成指R
+        'sz399015', // 深证100
+        'sz399016', // 深证创新
+        'sz399017', // 中小板创新
+        'sz399018', // 创业板创新
+        'sz399100', // 深证新指数
+        'sz399106', // 深证综指
+        'sz399107', // 深证A指
+        'sz399108', // 深证B指
+        'sz399330', // 深证100
+        'sz399333', // 中小板指
+        'sz399606', // 创业板综
+        // 北交所指数
+        'bj899050', // 北证50
+    ],
+    // ETF代码范围
+    ETF_RANGES: [
+        { name: '上海ETF510段', prefix: 'sh', start: 510000, end: 519999 },
+        { name: '上海ETF562段', prefix: 'sh', start: 562000, end: 562999 }, // 包含北证50ETF
+        { name: '上海ETF588段', prefix: 'sh', start: 588000, end: 588999 },
+        { name: '深圳ETF159段', prefix: 'sz', start: 159000, end: 159999 },
+    ],
+    // 港股代码范围（常见港股）
+    HK_STOCK_RANGES: [
+        { name: '港股00001-00999', start: 1, end: 999 },
+        { name: '港股01000-01999', start: 1000, end: 1999 },
+        { name: '港股02000-02999', start: 2000, end: 2999 },
+        { name: '港股03000-03999', start: 3000, end: 3999 },
+        { name: '港股04000-04999', start: 4000, end: 4999 },
+        { name: '港股05000-05999', start: 5000, end: 5999 },
+        { name: '港股06000-06999', start: 6000, end: 6999 },
+        { name: '港股07000-07999', start: 7000, end: 7999 },
+        { name: '港股08000-08999', start: 8000, end: 8999 },
+        { name: '港股09000-09999', start: 9000, end: 9999 },
+    ],
 };
 
 // HTTP GET 请求（支持 GBK 编码）
@@ -66,12 +130,35 @@ export async function httpGet(url: string, headers?: http.OutgoingHttpHeaders): 
     });
 }
 
-// 格式化成交量
-export function formatVolume(vol: number): string {
-    if (vol >= 10000) {
-        return `${(vol / 10000).toFixed(2)}万手`;
+// 根据股票代码判断股票类型
+export function getStockUnitType(code: string): 'a' | 'hk' | 'us' {
+    const lowerCode = code.toLowerCase();
+    if (lowerCode.startsWith('hk')) {
+        return 'hk';
+    } else if (lowerCode.startsWith('us.')) {
+        return 'us';
     }
-    return `${vol.toFixed(0)}手`;
+    return 'a';
+}
+
+// 格式化成交量
+// unitType: 'a' 表示A股（单位：手），'hk' 表示港股（单位：股），'us' 表示美股（单位：股）
+export function formatVolume(vol: number, unitType: 'a' | 'hk' | 'us' = 'a'): string {
+    const unit = unitType === 'a' ? '手' : '股';
+    
+    if (vol >= 100000000) {
+        // 达到亿单位，显示为"亿股"或"亿手"
+        return `${(vol / 100000000).toFixed(2)}亿${unit}`;
+    } else if (vol >= 10000) {
+        // 达到万单位，显示为"万股"或"万手"
+        return `${(vol / 10000).toFixed(2)}万${unit}`;
+    }
+    return `${vol.toFixed(0)}${unit}`;
+}
+
+// 格式化成交量（根据股票代码自动判断单位）
+export function formatVolumeByCode(vol: number, code: string): string {
+    return formatVolume(vol, getStockUnitType(code));
 }
 
 // 格式化成交额

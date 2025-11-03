@@ -27,12 +27,24 @@ export class StockDataService {
         
         for (const code of codes) {
             try {
-                const data = await httpGet(`http://qt.gtimg.cn/q=${code}`);
+                // 转换代码格式为腾讯财经格式
+                let tencentCode = code;
+                
+                // 美股代码：us.AAPL -> r_usAAPL
+                if (code.toLowerCase().startsWith('us.')) {
+                    const symbol = code.substring(3); // 去掉 'us.'
+                    tencentCode = `r_us${symbol.toUpperCase()}`;
+                }
+                // 港股代码：hk00700 -> hk00700（保持不变）
+                // A股代码：sz000001 -> sz000001（保持不变）
+                
+                const data = await httpGet(`http://qt.gtimg.cn/q=${tencentCode}`);
                 const match = data.match(/="([^"]+)"/);
                 
                 if (match?.[1]) {
                     const parts = match[1].split('~');
                     if (parts.length >= 5) {
+                        // 使用原始代码保存，而不是腾讯格式
                         results.push(this.parseTencentData(code, parts));
                     }
                 }
@@ -52,8 +64,13 @@ export class StockDataService {
         const todayHigh = parseFloat(parts[33]) || currentPrice;
         const todayLow = parseFloat(parts[34]) || currentPrice;
         
-        const volume = this.extractVolume(parts);
-        const turnover = this.calculateTurnover(parts, currentPrice, volume);
+        // 判断股票类型
+        const lowerCode = code.toLowerCase();
+        const isHKStock = lowerCode.startsWith('hk');
+        const isUSStock = lowerCode.startsWith('us.');
+        
+        const volume = this.extractVolume(parts, isHKStock, isUSStock);
+        const turnover = this.calculateTurnover(parts, currentPrice, volume, isHKStock, isUSStock);
         const changePercent = parts[32] || this.calculateChangePercent(currentPrice, yesterdayClose);
         
         // 获取当前时间
@@ -67,43 +84,72 @@ export class StockDataService {
         };
     }
     
-    private extractVolume(parts: string[]): number {
-        for (const idx of [6, 9, 36]) {
-            const candidate = parseFloat(parts[idx]) || 0;
-            if (candidate > 0 && candidate < 100000000) {
-                return candidate;
-            }
+    private extractVolume(parts: string[], isHKStock: boolean, isUSStock: boolean): number {
+        // 腾讯财经API数据格式：
+        // A股：索引6是成交量（单位：手）
+        // 港股：索引6和36是成交量（单位：股），保持为股
+        // 美股：索引6和36是成交量（单位：股），保持为股
+        
+        let volume = 0;
+        
+        // 优先使用索引6
+        if (parts[6]) {
+            volume = parseFloat(parts[6]) || 0;
+        } else if (parts[36]) {
+            volume = parseFloat(parts[36]) || 0;
         }
-        return 0;
+        
+        // 港股和美股成交量单位保持为"股"，不转换为"手"
+        // A股成交量单位已经是"手"，无需转换
+        
+        return volume;
     }
     
-    private calculateTurnover(parts: string[], currentPrice: number, volume: number): number {
+    private calculateTurnover(parts: string[], currentPrice: number, volume: number, isHKStock: boolean, isUSStock: boolean): number {
+        // 腾讯财经API数据格式：
+        // A股：索引37是成交额（单位：万元），需要乘以10000转换为元
+        // 港股：索引37是成交额（单位：港元），已经是元为单位
+        // 美股：索引37是成交额（单位：美元），已经是元为单位
+        
         let turnover = 0;
+        
+        // 优先使用索引37
         const turnoverValue = parseFloat(parts[37]) || 0;
         
         if (turnoverValue > 0) {
-            turnover = turnoverValue * 10000;
+            if (isHKStock || isUSStock) {
+                // 港股和美股成交额已经是元为单位，直接使用
+                turnover = turnoverValue;
+            } else {
+                // A股成交额单位是"万元"，需要乘以10000转换为元
+                // 但如果值很大（>1000），可能已经是元为单位
+                if (turnoverValue < 1000) {
+                    turnover = turnoverValue * 10000;
+                } else {
+                    turnover = turnoverValue;
+                }
+            }
         } else {
-            for (const idx of [7, 10]) {
-                const candidate = parseFloat(parts[idx]) || 0;
-                if (candidate > 0 && candidate < 10000000000000) {
-                    turnover = candidate;
-                    break;
+            // 如果没有索引37，尝试其他索引（A股）
+            if (!isHKStock && !isUSStock) {
+                for (const idx of [7, 10]) {
+                    const candidate = parseFloat(parts[idx]) || 0;
+                    if (candidate > 0 && candidate < 10000000000000) {
+                        turnover = candidate;
+                        break;
+                    }
                 }
             }
         }
         
-        if (volume > 0 && currentPrice > 0) {
-            const estimatedTurnover = volume * 100 * currentPrice;
-            if (turnover > 0) {
-                const ratio = turnover / estimatedTurnover;
-                if (ratio < 0.1 && turnover < 100000000) {
-                    turnover *= 10000;
-                } else if (ratio > 2) {
-                    turnover = estimatedTurnover;
-                }
+        // 如果还是没有成交额，尝试根据成交量和价格计算（A股）
+        // A股：成交量单位是"手"，所以乘以100（1手=100股）
+        // 港美股：成交量单位是"股"，所以不需要乘以100
+        if (turnover === 0 && volume > 0 && currentPrice > 0) {
+            if (isHKStock || isUSStock) {
+                turnover = volume * currentPrice;
             } else {
-                turnover = estimatedTurnover;
+                turnover = volume * 100 * currentPrice;
             }
         }
         
@@ -112,12 +158,26 @@ export class StockDataService {
     
     private async fetchFromSina(codes: string[]): Promise<StockInfo[]> {
         try {
-            const data = await httpGet(`http://hq.sinajs.cn/list=${codes.join(',')}`, {
+            // 新浪财经不支持港美股，只支持A股和指数
+            // 过滤出支持的代码（A股和指数）
+            const supportedCodes = codes.filter(code => {
+                const lower = code.toLowerCase();
+                return lower.startsWith('sz') || 
+                       lower.startsWith('sh') || 
+                       lower.startsWith('bj') ||
+                       /^\d{6}$/.test(code);
+            });
+            
+            if (supportedCodes.length === 0) {
+                return [];
+            }
+            
+            const data = await httpGet(`http://hq.sinajs.cn/list=${supportedCodes.join(',')}`, {
                 'Referer': 'http://finance.sina.com.cn',
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             });
             
-            return this.parseSinaData(data, codes);
+            return this.parseSinaData(data, supportedCodes);
         } catch (error) {
             console.error('获取新浪数据失败');
             return [];

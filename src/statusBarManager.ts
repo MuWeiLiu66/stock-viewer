@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { StockInfo } from './stockDataService';
-import { formatVolume, formatTurnover, formatChangePercent, formatChangeAmount } from './utils';
+import { formatVolume, formatVolumeByCode, formatTurnover, formatChangePercent, formatChangeAmount } from './utils';
 
 export class StatusBarManager {
     private settingsBarItem!: vscode.StatusBarItem;
@@ -220,7 +220,7 @@ export class StatusBarManager {
         md.appendMarkdown(`| 今开盘 | ${stock.todayOpen.toFixed(2)} |\n`);
         md.appendMarkdown(`| 今日最高 | ${stock.todayHigh.toFixed(2)} |\n`);
         md.appendMarkdown(`| 今日最低 | ${stock.todayLow.toFixed(2)} |\n`);
-        md.appendMarkdown(`| 成交量 | ${formatVolume(stock.volume)} |\n`);
+        md.appendMarkdown(`| 成交量 | ${formatVolumeByCode(stock.volume, stock.code)} |\n`);
         md.appendMarkdown(`| 成交额 | ${formatTurnover(stock.turnover)} |\n`);
         md.appendMarkdown(`\n---\n\n`);
         md.appendMarkdown(`*数据更新时间: ${stock.updateTime}*\n`);
