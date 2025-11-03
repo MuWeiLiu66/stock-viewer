@@ -261,13 +261,13 @@ cp /path/to/your/icon.png icons/icon.png
 
 ```bash
 # 运行所有测试
-npm test
+pnpm test
 
 # 监听模式运行测试（开发时推荐）
-npm run test:watch
+pnpm run test:watch
 
 # 生成测试覆盖率报告
-npm run test:coverage
+pnpm run test:coverage
 ```
 
 ### 测试覆盖
@@ -296,7 +296,7 @@ tests/
 
 1. 为新功能编写对应的单元测试
 2. 测试覆盖核心逻辑和边界情况
-3. 运行 `npm test` 确保所有测试通过
+3. 运行 `pnpm test` 确保所有测试通过
 4. 检查测试覆盖率报告，确保覆盖率不低于现有水平
 
 ## ❓ 常见问题

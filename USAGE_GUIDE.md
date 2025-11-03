@@ -1,6 +1,6 @@
 # Stock Viewer 使用指南
 
-本文档详细说明项目中各个 npm 命令的用途、流程和最佳实践。
+本文档详细说明项目中各个 pnpm 命令的用途、流程和最佳实践。
 
 ## 📋 目录
 
@@ -20,7 +20,7 @@
 ### 1. `compile`
 
 ```bash
-npm run compile
+pnpm run compile
 ```
 
 - **用途**: 编译 TypeScript 代码为 JavaScript
@@ -33,7 +33,7 @@ npm run compile
 ### 2. `watch`
 
 ```bash
-npm run watch
+pnpm run watch
 ```
 
 - **用途**: 监听模式，自动编译修改的文件
@@ -44,17 +44,17 @@ npm run watch
 ### 3. `build`
 
 ```bash
-npm run build
+pnpm run build
 ```
 
 - **用途**: 构建项目（等同于 compile）
-- **原理**: 调用 `npm run compile`
+- **原理**: 调用 `pnpm run compile`
 - **场景**: 发布前的标准构建步骤
 
 ### 4. `clean`
 
 ```bash
-npm run clean
+pnpm run clean
 ```
 
 - **用途**: 清理编译产物
@@ -71,12 +71,12 @@ npm run clean
 ### 5. `package`
 
 ```bash
-npm run package
+pnpm run package
 ```
 
 - **用途**: 打包扩展为 `.vsix` 文件（用于本地安装或手动分发）
 - **流程**: 
-  1. `npm run build` - 编译代码
+  1. `pnpm run build` - 编译代码
   2. `vsce package` - 打包成 `.vsix` 文件
 - **输出**: 生成 `stock-viewer-x.x.x.vsix` 文件
 - **场景**: 
@@ -93,20 +93,20 @@ npm run package
 ### 6. `package:patch`
 
 ```bash
-npm run package:patch
+pnpm run package:patch
 ```
 
 - **用途**: 升级 **patch** 版本号并打包
 - **流程**:
-  1. `npm version patch --no-git-tag-version` - 版本号 +0.0.1
-  2. `npm run package` - 打包
+  1. `pnpm version patch --no-git-tag-version` - 版本号 +0.0.1
+  2. `pnpm run package` - 打包
 - **示例**: `0.0.1` → `0.0.2`
 - **适用**: Bug 修复、小改进
 
 ### 7. `package:minor`
 
 ```bash
-npm run package:minor
+pnpm run package:minor
 ```
 
 - **用途**: 升级 **minor** 版本号并打包
@@ -116,7 +116,7 @@ npm run package:minor
 ### 8. `package:major`
 
 ```bash
-npm run package:major
+pnpm run package:major
 ```
 
 - **用途**: 升级 **major** 版本号并打包
@@ -130,18 +130,18 @@ npm run package:major
 ### 9. `version:patch`
 
 ```bash
-npm run version:patch
+pnpm run version:patch
 ```
 
 - **用途**: 仅升级 patch 版本号（不打包、不发布）
-- **原理**: `npm version patch --no-git-tag-version`
+- **原理**: `pnpm version patch --no-git-tag-version`
 - **修改**: 直接修改 `package.json` 中的 `version` 字段
 - **场景**: 想手动控制打包和发布时机
 
 ### 10. `version:minor`
 
 ```bash
-npm run version:minor
+pnpm run version:minor
 ```
 
 - **用途**: 仅升级 minor 版本号
@@ -150,7 +150,7 @@ npm run version:minor
 ### 11. `version:major`
 
 ```bash
-npm run version:major
+pnpm run version:major
 ```
 
 - **用途**: 仅升级 major 版本号
@@ -163,12 +163,12 @@ npm run version:major
 ### 12. `publish`
 
 ```bash
-npm run publish
+pnpm run publish
 ```
 
 - **用途**: 发布扩展到 VS Code Marketplace（不升级版本）
 - **流程**:
-  1. `npm run build` - 编译代码
+  1. `pnpm run build` - 编译代码
   2. `vsce publish` - 发布到市场
 - **前提**: 
   - ✅ 版本号必须比已发布的版本高
@@ -179,13 +179,13 @@ npm run publish
 ### 13. `publish:patch`
 
 ```bash
-npm run publish:patch
+pnpm run publish:patch
 ```
 
 - **用途**: 升级 patch 版本并发布到 Marketplace
 - **流程**:
-  1. `npm run version:patch` - 版本号 +0.0.1
-  2. `npm run build` - 编译
+  1. `pnpm run version:patch` - 版本号 +0.0.1
+  2. `pnpm run build` - 编译
   3. `vsce publish patch` - 发布
 - **示例**: `0.0.1` → `0.0.2` 并发布
 - **适用**: Bug 修复、文档更新
@@ -193,7 +193,7 @@ npm run publish:patch
 ### 14. `publish:minor`
 
 ```bash
-npm run publish:minor
+pnpm run publish:minor
 ```
 
 - **用途**: 升级 minor 版本并发布
@@ -203,7 +203,7 @@ npm run publish:minor
 ### 15. `publish:major`
 
 ```bash
-npm run publish:major
+pnpm run publish:major
 ```
 
 - **用途**: 升级 major 版本并发布
@@ -222,7 +222,7 @@ npm run publish:major
 
 - **用途**: 发布前自动执行的钩子
 - **时机**: `vsce publish` 或 `vsce package` 之前自动触发
-- **原理**: 调用 `npm run compile` 确保代码已编译
+- **原理**: 调用 `pnpm run compile` 确保代码已编译
 - **重要**: 这是 VS Code 扩展的标准钩子
 
 ### 17. `prepublishOnly`
@@ -231,7 +231,7 @@ npm run publish:major
 # 自动执行，不需要手动调用
 ```
 
-- **用途**: npm publish 前执行（VS Code 扩展一般不用）
+- **用途**: pnpm publish 前执行（VS Code 扩展一般不用）
 - **原理**: 清理旧文件并重新构建
 - **注意**: 与 `vscode:prepublish` 不同
 
@@ -254,7 +254,7 @@ npm run publish:major
 #### 1️⃣ **version 命令**
 
 ```bash
-npm run version:patch   # 0.0.1 → 0.0.2
+pnpm run version:patch   # 0.0.1 → 0.0.2
 ```
 
 - **只做一件事**: 修改 `package.json` 中的版本号
@@ -266,8 +266,8 @@ npm run version:patch   # 0.0.1 → 0.0.2
 #### 2️⃣ **package 命令**
 
 ```bash
-npm run package         # 生成 stock-viewer-0.0.1.vsix
-npm run package:patch   # 升级版本 → 0.0.2 → 生成 .vsix
+pnpm run package         # 生成 stock-viewer-0.0.1.vsix
+pnpm run package:patch   # 升级版本 → 0.0.2 → 生成 .vsix
 ```
 
 - **目标**: 生成 `.vsix` 文件
@@ -281,8 +281,8 @@ npm run package:patch   # 升级版本 → 0.0.2 → 生成 .vsix
 #### 3️⃣ **publish 命令**
 
 ```bash
-npm run publish         # 发布当前版本到市场
-npm run publish:patch   # 升级版本 → 0.0.2 → 发布
+pnpm run publish         # 发布当前版本到市场
+pnpm run publish:patch   # 升级版本 → 0.0.2 → 发布
 ```
 
 - **目标**: 发布到 VS Code Marketplace
@@ -303,13 +303,13 @@ npm run publish:patch   # 升级版本 → 0.0.2 → 发布
 
 ```bash
 # 1. 启动监听模式
-npm run watch
+pnpm run watch
 
 # 2. 修改代码...
 # 代码会自动编译
 
 # 3. 打包测试
-npm run package
+pnpm run package
 
 # 4. 在 VS Code 中安装 .vsix 测试
 # Extensions → Install from VSIX → 选择生成的文件
@@ -325,7 +325,7 @@ git add .
 git commit -m "fix: 修复某个bug"
 
 # 2. 升级 patch 版本并发布
-npm run publish:patch
+pnpm run publish:patch
 # 0.0.1 → 0.0.2 并自动发布
 
 # 3. 推送代码到 GitHub
@@ -340,7 +340,7 @@ git add .
 git commit -m "feat: 新增某功能"
 
 # 2. 升级 minor 版本并发布
-npm run publish:minor
+pnpm run publish:minor
 # 0.0.1 → 0.1.0 并自动发布
 
 # 3. 推送代码
@@ -351,14 +351,14 @@ git push
 
 ```bash
 # 1. 升级版本并打包
-npm run package:patch
+pnpm run package:patch
 # 生成 stock-viewer-0.0.2.vsix
 
 # 2. 本地测试 .vsix 文件
 # 在 VS Code 中安装并测试所有功能
 
 # 3. 确认无误后发布到市场
-npm run publish
+pnpm run publish
 # 使用已升级的版本号发布
 
 # 4. 提交代码
@@ -371,19 +371,19 @@ git push
 
 ```bash
 # 1. 先改版本号
-npm run version:minor
+pnpm run version:minor
 # 0.0.1 → 0.1.0
 
 # 2. 编译代码
-npm run build
+pnpm run build
 
 # 3. 打包测试
-npm run package
+pnpm run package
 
 # 4. 本地测试...
 
 # 5. 确认后发布
-npm run publish
+pnpm run publish
 
 # 6. 提交代码
 git add .
@@ -395,13 +395,13 @@ git push
 
 ```bash
 # 1. 清理所有编译产物
-npm run clean
+pnpm run clean
 
 # 2. 重新编译
-npm run build
+pnpm run build
 
 # 3. 打包
-npm run package
+pnpm run package
 ```
 
 ---
@@ -420,17 +420,17 @@ npm run package
 # 标准流程
 git add .
 git commit -m "feat: 新功能描述"
-npm run publish:minor  # 或 patch/major
+pnpm run publish:minor  # 或 patch/major
 git push
 ```
 
 #### 3. **发布前测试**
 ```bash
 # 先打包测试
-npm run package:patch
+pnpm run package:patch
 # 测试 .vsix
 # 确认无误后
-npm run publish
+pnpm run publish
 ```
 
 #### 4. **保持 Git 干净**
@@ -449,8 +449,8 @@ npm run publish
 #### 1. **不要重复发布相同版本**
 ```bash
 # ❌ 错误示例
-npm run publish  # 版本 0.0.1
-npm run publish  # 还是 0.0.1，会报错
+pnpm run publish  # 版本 0.0.1
+pnpm run publish  # 还是 0.0.1，会报错
 ```
 **解决**: 必须先升级版本号
 
@@ -458,7 +458,7 @@ npm run publish  # 还是 0.0.1，会报错
 ```bash
 # ❌ 错误示例
 # 有未提交的文件
-npm run publish:patch  # 可能导致版本不一致
+pnpm run publish:patch  # 可能导致版本不一致
 ```
 **解决**: 先提交所有修改
 
@@ -466,15 +466,15 @@ npm run publish:patch  # 可能导致版本不一致
 ```bash
 # ❌ 错误示例
 # 修改代码后直接
-npm run publish:minor  # 未测试就发布
+pnpm run publish:minor  # 未测试就发布
 ```
-**解决**: 先用 `npm run package` 打包测试
+**解决**: 先用 `pnpm run package` 打包测试
 
 #### 4. **不要在开发分支发布**
 ```bash
 # ❌ 错误示例
 git checkout dev
-npm run publish:patch  # 在开发分支发布
+pnpm run publish:patch  # 在开发分支发布
 ```
 **解决**: 切换到 main/master 分支发布
 
@@ -489,7 +489,7 @@ npm run publish:patch  # 在开发分支发布
 **解决方法**:
 ```bash
 # 升级到新版本
-npm run publish:patch  # 或 minor/major
+pnpm run publish:patch  # 或 minor/major
 ```
 
 ### Q2: Git 工作区不干净
@@ -504,7 +504,7 @@ git commit -m "描述信息"
 
 # 或者暂存修改
 git stash
-npm run publish:patch
+pnpm run publish:patch
 git stash pop
 ```
 
@@ -547,15 +547,15 @@ nvm use 22
 
 **位置**: 项目根目录
 **命名**: `stock-viewer-x.x.x.vsix`
-**清理**: `npm run clean` 会删除
+**清理**: `pnpm run clean` 会删除
 
 ### Q7: 发布前的检查清单
 
 在运行发布命令前，确保：
 - ✅ Node.js 版本正确（使用 `nvm use` 切换到项目要求的版本）
 - ✅ Git 工作区干净（所有修改已提交）
-- ✅ 代码已编译通过（`npm run build`）
-- ✅ 本地测试通过（`npm run package` 并安装测试）
+- ✅ 代码已编译通过（`pnpm run build`）
+- ✅ 本地测试通过（`pnpm run package` 并安装测试）
 - ✅ 版本号符合语义化规范
 
 ---
@@ -566,18 +566,18 @@ nvm use 22
 
 ```bash
 # 开发阶段
-npm run watch          # 监听编译
-npm run compile        # 手动编译
-npm run clean          # 清理产物
+pnpm run watch          # 监听编译
+pnpm run compile        # 手动编译
+pnpm run clean          # 清理产物
 
 # 测试阶段
-npm run package        # 打包测试
-npm run package:patch  # 升级版本+打包
+pnpm run package        # 打包测试
+pnpm run package:patch  # 升级版本+打包
 
 # 发布阶段
-npm run publish:patch  # Bug修复发布 (0.0.x)
-npm run publish:minor  # 新功能发布 (0.x.0)
-npm run publish:major  # 重大更新发布 (x.0.0)
+pnpm run publish:patch  # Bug修复发布 (0.0.x)
+pnpm run publish:minor  # 新功能发布 (0.x.0)
+pnpm run publish:major  # 重大更新发布 (x.0.0)
 ```
 
 ### 完整发布流程
@@ -587,7 +587,7 @@ npm run publish:major  # 重大更新发布 (x.0.0)
 
 git add .
 git commit -m "feat: 新功能"
-npm run publish:minor
+pnpm run publish:minor
 git push
 ```
 
