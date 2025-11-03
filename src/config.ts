@@ -27,7 +27,7 @@ export class ConfigManager {
             showChangePercent: config.get<boolean>('showChangePercent', true),
             colorfulDisplay: config.get<boolean>('colorfulDisplay', true),
             alignment: config.get<'left' | 'right'>('alignment', 'right'),
-            updateInterval: config.get<number>('updateInterval', 8) * 1000,
+            updateInterval: Math.min(Math.max(config.get<number>('updateInterval', 8), 3), 1800) * 1000, // 限制在3-1800秒之间（30分钟）
             showNotifications: config.get<boolean>('showNotifications', false),
             stopOnMarketClose: config.get<boolean>('stopOnMarketClose', false),
             enableAutoUpdate: config.get<boolean>('enableAutoUpdate', true)

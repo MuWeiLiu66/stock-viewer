@@ -233,8 +233,80 @@ export function formatChangeAmount(amount: number): string {
 }
 
 /**
- * 判断当前是否在A股交易时间内
- * 交易时间：周一至周五 9:30-11:30, 13:00-15:00
+ * 通过API返回的数据时间戳判断市场是否开盘
+ * @param dataTimestamp API返回的数据时间戳
+ * @param dataSource 数据源类型
+ * @returns 是否在交易时间内
+ */
+export function isMarketOpenByData(dataTimestamp: string | undefined, dataSource: 'tencent' | 'sina'): boolean {
+    if (!dataTimestamp || !dataTimestamp.trim()) {
+        // 如果没有时间戳，回退到时间判断
+        return isMarketOpen();
+    }
+    
+    try {
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        
+        let dataDate: Date;
+        
+        if (dataSource === 'tencent') {
+            // 腾讯财经格式：YYYYMMDDHHMMSS（如：20251103161412）
+            if (dataTimestamp.length >= 8) {
+                const year = parseInt(dataTimestamp.substring(0, 4));
+                const month = parseInt(dataTimestamp.substring(4, 6)) - 1; // 月份从0开始
+                const day = parseInt(dataTimestamp.substring(6, 8));
+                dataDate = new Date(year, month, day);
+            } else {
+                return isMarketOpen();
+            }
+        } else {
+            // 新浪财经格式：YYYY-MM-DD HH:MM:SS（如：2025-11-03 15:30:39）
+            const dateMatch = dataTimestamp.match(/(\d{4})-(\d{2})-(\d{2})/);
+            if (dateMatch) {
+                const year = parseInt(dateMatch[1]);
+                const month = parseInt(dateMatch[2]) - 1;
+                const day = parseInt(dateMatch[3]);
+                dataDate = new Date(year, month, day);
+            } else {
+                return isMarketOpen();
+            }
+        }
+        
+        // 如果数据日期是今天，且数据时间戳的时间在交易时间内，认为市场是开的
+        const dataDateOnly = new Date(dataDate.getFullYear(), dataDate.getMonth(), dataDate.getDate());
+        if (dataDateOnly.getTime() === today.getTime()) {
+            // 数据是今天的，进一步检查时间
+            if (dataSource === 'tencent' && dataTimestamp.length >= 14) {
+                const hours = parseInt(dataTimestamp.substring(8, 10));
+                const minutes = parseInt(dataTimestamp.substring(10, 12));
+                const time = hours * 100 + minutes;
+                // 交易时间：9:15-11:30, 13:00-15:00
+                return (time >= 915 && time <= 1130) || (time >= 1300 && time <= 1500);
+            } else if (dataSource === 'sina') {
+                const timeMatch = dataTimestamp.match(/(\d{2}):(\d{2}):(\d{2})/);
+                if (timeMatch) {
+                    const hours = parseInt(timeMatch[1]);
+                    const minutes = parseInt(timeMatch[2]);
+                    const time = hours * 100 + minutes;
+                    return (time >= 915 && time <= 1130) || (time >= 1300 && time <= 1500);
+                }
+            }
+            // 如果无法解析时间，但日期是今天，认为市场可能开了（保守判断）
+            return isMarketOpen();
+        }
+        
+        // 数据日期不是今天，说明市场未开盘（节假日或盘后）
+        return false;
+    } catch (error) {
+        // 解析失败，回退到时间判断
+        return isMarketOpen();
+    }
+}
+
+/**
+ * 判断当前是否在A股交易时间内（基于时间判断）
+ * 交易时间：周一至周五 9:15-11:30（包含集合竞价9:15-9:30）, 13:00-15:00
  * @returns 是否在交易时间内
  */
 export function isMarketOpen(): boolean {
@@ -250,8 +322,9 @@ export function isMarketOpen(): boolean {
     const minutes = now.getMinutes();
     const time = hours * 100 + minutes;
     
-    // 上午交易时间：9:30 - 11:30
-    if (time >= 930 && time <= 1130) {
+    // 上午交易时间：9:15（集合竞价开始）- 11:30
+    // 包含集合竞价时间：9:15-9:25（集合竞价）、9:25-9:30（不能撤单）、9:30-11:30（连续竞价）
+    if (time >= 915 && time <= 1130) {
         return true;
     }
     

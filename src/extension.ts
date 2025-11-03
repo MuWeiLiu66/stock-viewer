@@ -5,7 +5,7 @@ import { StockItem, fetchAllStocks } from './stockDatabase';
 import { ConfigManager } from './config';
 import { StockDataService, StockInfo } from './stockDataService';
 import { StatusBarManager } from './statusBarManager';
-import { formatVolume, formatVolumeByCode, formatTurnover, formatChangePercent, formatChangeAmount, getStockPrefix, MIN_UPDATE_INTERVAL, CACHE_EXPIRY_DAYS, MIN_EXPECTED_STOCKS, isMarketOpen } from './utils';
+import { formatVolume, formatVolumeByCode, formatTurnover, formatChangePercent, formatChangeAmount, getStockPrefix, MIN_UPDATE_INTERVAL, CACHE_EXPIRY_DAYS, MIN_EXPECTED_STOCKS, isMarketOpen, isMarketOpenByData } from './utils';
 
 interface StockQuickPickItem extends vscode.QuickPickItem {
     stock: StockItem | null;
@@ -33,24 +33,34 @@ class StockViewer {
                 await this.configManager.validateAndFixStockCodes();
             }
             if (e.affectsConfiguration('stockViewer')) {
-                this.start();
+                // 只有在相关配置变化时才重新启动，避免不必要的重启
+                const affectedKeys = [
+                    'stockViewer.enableAutoUpdate',
+                    'stockViewer.updateInterval',
+                    'stockViewer.stopOnMarketClose',
+                    'stockViewer.showStockName',
+                    'stockViewer.showPrice',
+                    'stockViewer.showChangePercent',
+                    'stockViewer.colorfulDisplay',
+                    'stockViewer.alignment',
+                    'stockViewer.dataSource'
+                ];
+                
+                // 检查是否有相关配置变化
+                const hasRelevantChange = affectedKeys.some(key => e.affectsConfiguration(key));
+                
+                if (hasRelevantChange) {
+                    this.start();
+                } else {
+                    // 其他配置变化（如showNotifications）只需要刷新显示，不需要重启定时器
+                    this.updateStatusBar();
+                }
             }
         });
     }
 
     private async updateStatusBar(): Promise<void> {
         const config = this.configManager.get();
-        
-        // 检查是否启用收盘时间停止请求（且自动更新已开启）
-        if (config.stopOnMarketClose && !isMarketOpen()) {
-            const tooltip = '当前为非交易时间，已暂停更新\n交易时间：周一至周五 9:30-11:30, 13:00-15:00';
-            if (config.showStockName) {
-                this.statusBarManager.showError('休市中', true, tooltip);
-            } else {
-                this.statusBarManager.showError('$(watch)', false, tooltip);
-            }
-            return;
-        }
         
         if (config.stockCodes.length === 0) {
             this.statusBarManager.showNotConfigured(config.showStockName);
@@ -60,6 +70,34 @@ class StockViewer {
         try {
             const normalizedCodes = normalizeStockCodes(config.stockCodes);
             const stocks = await this.dataService.fetchStocks(normalizedCodes, config.dataSource);
+            
+            // 如果启用了收盘时间停止更新，通过实际数据判断市场状态
+            if (config.stopOnMarketClose && stocks.length > 0) {
+                // 使用第一个股票的数据时间戳判断市场状态
+                const firstStock = stocks[0];
+                const marketOpen = isMarketOpenByData(firstStock.dataTimestamp, config.dataSource);
+                
+                if (!marketOpen) {
+                    const tooltip = '当前为非交易时间，已暂停更新\n交易时间：周一至周五 9:15-11:30（含集合竞价）, 13:00-15:00';
+                    if (config.showStockName) {
+                        this.statusBarManager.showError('休市中', true, tooltip);
+                    } else {
+                        this.statusBarManager.showError('$(watch)', false, tooltip);
+                    }
+                    return;
+                }
+            } else if (config.stopOnMarketClose) {
+                // 如果没有获取到数据，回退到时间判断
+                if (!isMarketOpen()) {
+                    const tooltip = '当前为非交易时间，已暂停更新\n交易时间：周一至周五 9:15-11:30（含集合竞价）, 13:00-15:00';
+                    if (config.showStockName) {
+                        this.statusBarManager.showError('休市中', true, tooltip);
+                    } else {
+                        this.statusBarManager.showError('$(watch)', false, tooltip);
+                    }
+                    return;
+                }
+            }
 
             if (stocks.length === 0) {
                 const tooltip = '未能获取到股票数据，请检查网络连接或稍后重试';

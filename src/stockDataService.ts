@@ -13,6 +13,7 @@ export interface StockInfo {
     volume: number;
     turnover: number;
     updateTime: string; // 数据更新时间
+    dataTimestamp?: string; // API返回的数据时间戳（用于判断市场状态）
 }
 
 export class StockDataService {
@@ -73,14 +74,18 @@ export class StockDataService {
         const turnover = this.calculateTurnover(parts, currentPrice, volume, isHKStock, isUSStock);
         const changePercent = parts[32] || this.calculateChangePercent(currentPrice, yesterdayClose);
         
-        // 获取当前时间
-        const updateTime = this.formatTime(new Date());
+        // 提取API返回的数据时间戳（索引30，格式：YYYYMMDDHHMMSS）
+        const dataTimestamp = parts[30] || '';
+        
+        // 使用API返回的时间戳作为更新时间，如果无法解析则使用当前时间
+        const updateTime = this.parseTimestampToTime(dataTimestamp, 'tencent') || this.formatTime(new Date());
         
         return {
             code, name, changePercent,
             currentPrice, yesterdayClose, todayOpen, todayHigh, todayLow,
             changeAmount: currentPrice - yesterdayClose,
-            volume, turnover, updateTime
+            volume, turnover, updateTime,
+            dataTimestamp
         };
     }
     
@@ -217,14 +222,20 @@ export class StockDataService {
         
         const changePercent = this.calculateChangePercent(currentPrice, yesterdayClose);
         
-        // 获取当前时间
-        const updateTime = this.formatTime(new Date());
+        // 提取API返回的数据时间戳（索引30是日期，索引31是时间，格式：YYYY-MM-DD,HH:MM:SS）
+        const dataDate = parts[30] || '';
+        const dataTime = parts[31] || '';
+        const dataTimestamp = dataDate && dataTime ? `${dataDate} ${dataTime}` : '';
+        
+        // 使用API返回的时间戳作为更新时间，如果无法解析则使用当前时间
+        const updateTime = this.parseTimestampToTime(dataTimestamp, 'sina') || this.formatTime(new Date());
         
         return {
             code, name, changePercent,
             currentPrice, yesterdayClose, todayOpen, todayHigh, todayLow,
             changeAmount: currentPrice - yesterdayClose,
-            volume, turnover, updateTime
+            volume, turnover, updateTime,
+            dataTimestamp
         };
     }
     
@@ -257,6 +268,40 @@ export class StockDataService {
         const minutes = String(date.getMinutes()).padStart(2, '0');
         const seconds = String(date.getSeconds()).padStart(2, '0');
         return `${hours}:${minutes}:${seconds}`;
+    }
+    
+    /**
+     * 解析API返回的时间戳并格式化为时间字符串（HH:MM:SS）
+     * @param timestamp API返回的时间戳
+     * @param dataSource 数据源类型
+     * @returns 格式化的时间字符串，如果解析失败返回null
+     */
+    private parseTimestampToTime(timestamp: string, dataSource: 'tencent' | 'sina'): string | null {
+        if (!timestamp || !timestamp.trim()) {
+            return null;
+        }
+        
+        try {
+            if (dataSource === 'tencent') {
+                // 腾讯财经格式：YYYYMMDDHHMMSS（如：20251103161412）
+                if (timestamp.length >= 14) {
+                    const hours = timestamp.substring(8, 10);
+                    const minutes = timestamp.substring(10, 12);
+                    const seconds = timestamp.substring(12, 14);
+                    return `${hours}:${minutes}:${seconds}`;
+                }
+            } else {
+                // 新浪财经格式：YYYY-MM-DD HH:MM:SS（如：2025-11-03 15:30:39）
+                const timeMatch = timestamp.match(/(\d{2}):(\d{2}):(\d{2})/);
+                if (timeMatch) {
+                    return `${timeMatch[1]}:${timeMatch[2]}:${timeMatch[3]}`;
+                }
+            }
+        } catch (error) {
+            // 解析失败，返回null，使用当前时间
+        }
+        
+        return null;
     }
 }
 

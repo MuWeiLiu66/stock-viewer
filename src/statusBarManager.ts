@@ -82,12 +82,37 @@ export class StatusBarManager {
     }
     
     private updateAlignmentIfNeeded(alignment: 'left' | 'right'): void {
+        // 只在对齐方式真正改变时才重新初始化，避免不必要的重建
         if (this.currentAlignment !== alignment) {
             const wasShowing = this.settingsBarItem && 
                 this.stockBarItems.length > 0 && 
                 this.stockBarItems.some(item => item.text);
+            // 保存当前显示的股票数据，以便重新显示
+            const currentStocksData: Array<{ text: string; tooltip: vscode.MarkdownString | string | undefined; color: vscode.ThemeColor | string | undefined }> = [];
+            for (const item of this.stockBarItems) {
+                if (item.text) {
+                    currentStocksData.push({
+                        text: item.text,
+                        tooltip: item.tooltip,
+                        color: item.color
+                    });
+                }
+            }
+            
             this.initializeItems(alignment);
-            if (wasShowing) {
+            
+            // 恢复之前显示的股票数据
+            if (wasShowing && currentStocksData.length > 0) {
+                this.settingsBarItem.show();
+                for (let i = 0; i < Math.min(currentStocksData.length, this.stockBarItems.length); i++) {
+                    const item = this.stockBarItems[i];
+                    const data = currentStocksData[i];
+                    item.text = data.text;
+                    item.tooltip = data.tooltip;
+                    item.color = data.color;
+                    item.show();
+                }
+            } else if (wasShowing) {
                 this.settingsBarItem.show();
             }
         }
@@ -173,23 +198,54 @@ export class StatusBarManager {
             const newTooltip = this.createSingleStockTooltip(stock, dataSource);
             
             // 只更新变化的内容，避免不必要的重绘
+            let needsUpdate = false;
+            
             if (item.text !== newText) {
                 item.text = newText;
-            }
-            item.tooltip = newTooltip;
-            item.command = 'stockViewer.showDetails';
-            
-            // 应用彩色显示
-            if (colorfulDisplay) {
-                const percent = parseFloat(stock.changePercent);
-                // 涨红跌绿
-                item.color = percent >= 0 ? new vscode.ThemeColor('charts.red') : new vscode.ThemeColor('charts.green');
-            } else {
-                item.color = undefined;
+                needsUpdate = true;
             }
             
-            // 确保项可见（只在需要时调用 show，避免重复调用）
-            item.show();
+            // 检查tooltip是否有变化（比较tooltip的值字符串）
+            const currentTooltip = item.tooltip;
+            const currentTooltipValue = currentTooltip instanceof vscode.MarkdownString 
+                ? currentTooltip.value 
+                : (currentTooltip || '');
+            const newTooltipValue = newTooltip.value || '';
+            if (currentTooltipValue !== newTooltipValue) {
+                item.tooltip = newTooltip;
+                needsUpdate = true;
+            }
+            
+            // 检查command是否有变化
+            if (item.command !== 'stockViewer.showDetails') {
+                item.command = 'stockViewer.showDetails';
+                needsUpdate = true;
+            }
+            
+            // 应用彩色显示（只在配置变化或涨跌状态变化时更新）
+            const percent = parseFloat(stock.changePercent);
+            const shouldBeRed = percent >= 0;
+            const currentColor = item.color;
+            const currentColorIsRed = currentColor instanceof vscode.ThemeColor && currentColor.id === 'charts.red';
+            const currentColorIsGreen = currentColor instanceof vscode.ThemeColor && currentColor.id === 'charts.green';
+            const currentColorMatches = colorfulDisplay 
+                ? (shouldBeRed && currentColorIsRed) || (!shouldBeRed && currentColorIsGreen)
+                : !currentColor;
+            
+            if (!currentColorMatches) {
+                if (colorfulDisplay) {
+                    // 涨红跌绿
+                    item.color = shouldBeRed ? new vscode.ThemeColor('charts.red') : new vscode.ThemeColor('charts.green');
+                } else {
+                    item.color = undefined;
+                }
+                needsUpdate = true;
+            }
+            
+            // 只在有更新或项不可见时才调用 show，避免不必要的重绘
+            if (needsUpdate || !item.text) {
+                item.show();
+            }
         }
         
         // 隐藏多余的股票项（如果有减少）
