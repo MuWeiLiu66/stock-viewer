@@ -137,10 +137,10 @@ export class StatusBarManager {
     ): void {
         this.updateAlignmentIfNeeded(alignment);
         this.settingsBarItem.show();
-        this.hideAllStockItems();
         
         const displayCount = Math.min(stocks.length, this.maxStocks);
         
+        // 先更新需要显示的股票项（避免闪烁）
         for (let i = 0; i < displayCount; i++) {
             const stock = stocks[i];
             const item = this.stockBarItems[i];
@@ -169,9 +169,15 @@ export class StatusBarManager {
                 parts.push(arrow);
             }
             
-            item.text = parts.join(' ');
-            item.tooltip = this.createSingleStockTooltip(stock, dataSource);
-            item.command = 'stockViewer.showDetails'; // 恢复点击事件
+            const newText = parts.join(' ');
+            const newTooltip = this.createSingleStockTooltip(stock, dataSource);
+            
+            // 只更新变化的内容，避免不必要的重绘
+            if (item.text !== newText) {
+                item.text = newText;
+            }
+            item.tooltip = newTooltip;
+            item.command = 'stockViewer.showDetails';
             
             // 应用彩色显示
             if (colorfulDisplay) {
@@ -182,7 +188,17 @@ export class StatusBarManager {
                 item.color = undefined;
             }
             
+            // 确保项可见（只在需要时调用 show，避免重复调用）
             item.show();
+        }
+        
+        // 隐藏多余的股票项（如果有减少）
+        for (let i = displayCount; i < this.maxStocks; i++) {
+            const item = this.stockBarItems[i];
+            if (item.text) {
+                item.hide();
+                item.text = ''; // 清空文本以便下次显示时检测
+            }
         }
     }
     
