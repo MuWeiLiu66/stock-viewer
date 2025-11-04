@@ -127,12 +127,7 @@ export class StockDataService {
                 turnover = turnoverValue;
             } else {
                 // A股成交额单位是"万元"，需要乘以10000转换为元
-                // 但如果值很大（>1000），可能已经是元为单位
-                if (turnoverValue < 1000) {
-                    turnover = turnoverValue * 10000;
-                } else {
-                    turnover = turnoverValue;
-                }
+                turnover = turnoverValue * 10000;
             }
         } else {
             // 如果没有索引37，尝试其他索引（A股）

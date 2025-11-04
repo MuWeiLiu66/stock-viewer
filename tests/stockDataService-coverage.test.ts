@@ -82,7 +82,7 @@ describe('StockDataService 覆盖率补充测试', () => {
       expect(stocks[0].turnover).toBe(5000000); // 500 * 10000
     });
 
-    it('应该处理 A股成交额大于等于1000的情况（已经是元）', async () => {
+    it('应该处理 A股成交额大于等于1000的情况（仍然是万元，需要乘以10000）', async () => {
       const fields = Array(40).fill('');
       fields[0] = 'sz000001';
       fields[1] = '平安银行';
@@ -90,7 +90,7 @@ describe('StockDataService 覆盖率补充测试', () => {
       fields[4] = '10.20';
       fields[5] = '10.55';
       fields[6] = '50000';
-      fields[37] = '5000000'; // 大于1000，已经是元
+      fields[37] = '5000'; // 5000万元，需要乘以10000
       fields[30] = '20240105143000';
       fields[32] = '5.00';
       fields[33] = '10.55';
@@ -101,7 +101,7 @@ describe('StockDataService 覆盖率补充测试', () => {
       const stocks = await service.fetchStocks(['sz000001'], 'tencent');
       
       expect(stocks).toHaveLength(1);
-      expect(stocks[0].turnover).toBe(5000000); // 保持不变
+      expect(stocks[0].turnover).toBe(50000000); // 5000 * 10000 = 50000000元
     });
 
     it('应该处理 A股无索引37时使用索引7或10', async () => {
