@@ -49,7 +49,10 @@ class StockViewer {
                 // 检查是否有相关配置变化
                 const hasRelevantChange = affectedKeys.some(key => e.affectsConfiguration(key));
                 
-                if (hasRelevantChange) {
+                // showStatusBar配置变化只需要刷新显示，不需要重启定时器
+                if (e.affectsConfiguration('stockViewer.showStatusBar')) {
+                    this.updateStatusBar();
+                } else if (hasRelevantChange) {
                     this.start();
                 } else {
                     // 其他配置变化（如showNotifications）只需要刷新显示，不需要重启定时器
@@ -61,6 +64,15 @@ class StockViewer {
 
     private async updateStatusBar(): Promise<void> {
         const config = this.configManager.get();
+        
+        // 根据配置决定是否显示状态栏
+        if (!config.showStatusBar) {
+            this.statusBarManager.setVisibility(false);
+            return;
+        }
+        
+        // 如果配置为显示状态栏，先设置为可见
+        this.statusBarManager.setVisibility(true);
         
         if (config.stockCodes.length === 0) {
             this.statusBarManager.showNotConfigured(config.showStockName);
@@ -517,6 +529,14 @@ function registerCommands(context: vscode.ExtensionContext) {
             const statusText = newValue ? '已开启' : '已关闭';
             // 这个命令总是显示提示，因为用户需要知道切换结果
             vscode.window.showInformationMessage(`提示气泡${statusText}`);
+        }),
+
+        vscode.commands.registerCommand('stockViewer.toggleShowStatusBar', async () => {
+            const newValue = await configManager.toggleShowStatusBar();
+            const statusText = newValue ? '已显示' : '已隐藏';
+            showNotification(`状态栏股票信息${statusText}`);
+            // 立即刷新一次以应用新设置
+            stockViewer.refresh();
         }),
 
         { dispose: () => stockViewer.dispose() }

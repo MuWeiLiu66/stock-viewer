@@ -96,6 +96,11 @@
         "command": "stockViewer.toggleShowNotifications",
         "title": "股票: 切换提示气泡",
         "category": "Stock Viewer"
+      },
+      {
+        "command": "stockViewer.toggleShowStatusBar",
+        "title": "股票: 切换状态栏显示",
+        "category": "Stock Viewer"
       }
     ],
     "keybindings": [
@@ -205,6 +210,13 @@
           "default": "right",
           "order": 14,
           "markdownDescription": "**显示设置** - 状态栏显示位置",
+          "scope": "application"
+        },
+        "stockViewer.showStatusBar": {
+          "type": "boolean",
+          "default": true,
+          "order": 15,
+          "markdownDescription": "**显示设置** - 显示状态栏股票信息（隐藏后，设置图标仍然可见）",
           "scope": "application"
         },
         "stockViewer.enableAutoUpdate": {

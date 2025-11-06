@@ -262,6 +262,18 @@ export class StatusBarManager {
         this.stockBarItems.forEach(item => item.hide());
     }
     
+    public setVisibility(visible: boolean): void {
+        if (visible) {
+            // 显示：设置图标保持可见（已经在updateStocks等方法中处理）
+            // 这里只需要确保设置图标可见
+            this.settingsBarItem.show();
+        } else {
+            // 隐藏：隐藏所有股票项，但保留设置图标可见
+            this.hideAllStockItems();
+            this.settingsBarItem.show();
+        }
+    }
+    
     private createSingleStockTooltip(stock: StockInfo, dataSource: string): vscode.MarkdownString {
         const md = new vscode.MarkdownString();
         const dataSourceName = dataSource === 'sina' ? '新浪财经' : '腾讯财经';

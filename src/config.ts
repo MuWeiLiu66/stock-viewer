@@ -8,6 +8,7 @@ export interface StockViewerConfig {
     showChangePercent: boolean;
     colorfulDisplay: boolean;
     alignment: 'left' | 'right';
+    showStatusBar: boolean;
     updateInterval: number;
     showNotifications: boolean;
     stopOnMarketClose: boolean;
@@ -27,6 +28,7 @@ export class ConfigManager {
             showChangePercent: config.get<boolean>('showChangePercent', true),
             colorfulDisplay: config.get<boolean>('colorfulDisplay', true),
             alignment: config.get<'left' | 'right'>('alignment', 'right'),
+            showStatusBar: config.get<boolean>('showStatusBar', true),
             updateInterval: Math.min(Math.max(config.get<number>('updateInterval', 8), 3), 1800) * 1000, // 限制在3-1800秒之间（30分钟）
             showNotifications: config.get<boolean>('showNotifications', false),
             stopOnMarketClose: config.get<boolean>('stopOnMarketClose', false),
@@ -94,6 +96,13 @@ export class ConfigManager {
         const config = this.get();
         const newValue = !config.colorfulDisplay;
         await this.update('colorfulDisplay', newValue);
+        return newValue;
+    }
+    
+    public async toggleShowStatusBar(): Promise<boolean> {
+        const config = this.get();
+        const newValue = !config.showStatusBar;
+        await this.update('showStatusBar', newValue);
         return newValue;
     }
     
