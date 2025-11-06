@@ -196,6 +196,8 @@ class StockViewer {
             // 如果启用了收盘时间停止更新，且当前不在交易时间，则不设置定时器
             if (config.stopOnMarketClose && !isMarketOpen()) {
                 // 不设置定时器，避免非交易时间时的无效更新
+                // 但需要更新状态栏显示"休市中"图标
+                this.updateStatusBar();
                 return;
             }
             
@@ -207,6 +209,8 @@ class StockViewer {
                         clearInterval(this.updateTimer);
                         this.updateTimer = undefined;
                     }
+                    // 更新状态栏显示"休市中"图标
+                    this.updateStatusBar();
                     return;
                 }
                 // 如果禁用了自动更新，也清除定时器

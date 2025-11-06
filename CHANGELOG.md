@@ -5,6 +5,13 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.1.5] - 2025-11-03
+
+### 修复
+- 修复收盘时间状态栏未自动切换为"休市中"图标的问题
+  - 当到达收盘时间且已开启"收盘停止更新"时，状态栏会自动更新为"休市中"或时钟图标
+  - 修复了定时器停止时未更新状态栏显示的问题
+
 ## [0.1.4] - 2025-11-03
 
 ### 新增
@@ -140,6 +147,7 @@
 - **[修复]**：问题修复
 - **[移除]**：已移除的功能
 
+[0.1.5]: https://github.com/Leo-Wei105/stock-viewer/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/Leo-Wei105/stock-viewer/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/Leo-Wei105/stock-viewer/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/Leo-Wei105/stock-viewer/compare/v0.1.1...v0.1.2
