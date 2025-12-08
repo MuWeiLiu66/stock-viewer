@@ -3,7 +3,7 @@
 在 VS Code 状态栏实时显示股票涨跌幅，支持智能搜索添加和快捷键操作。
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Issues](https://img.shields.io/github/issues/Leo-Wei105/stock-viewer)](https://github.com/Leo-Wei105/stock-viewer/issues)
+[![Issues](https://img.shields.io/github/issues/MuWeiLiu66/stock-viewer)](https://github.com/MuWeiLiu66/stock-viewer/issues)
 
 ## 💭 设计理念
 
@@ -374,7 +374,7 @@ A: 港美股需要使用腾讯数据源。确保 `dataSource` 设置为 `tencent
 A: 显示的是API返回的实际数据时间戳，而非本地时间，能更准确地反映数据的时效性
 
 **Q: 如何报告问题或提出建议？**  
-A: 欢迎在 [GitHub Issues](https://github.com/Leo-Wei105/stock-viewer/issues) 提交问题或建议
+A: 欢迎在 [GitHub Issues](https://github.com/MuWeiLiu66/stock-viewer/issues) 提交问题或建议
 
 ## 📄 许可证
 
@@ -382,6 +382,6 @@ MIT License
 
 ## 🔗 相关链接
 
-- **GitHub 仓库**：https://github.com/Leo-Wei105/stock-viewer
-- **问题反馈**：https://github.com/Leo-Wei105/stock-viewer/issues
+- **GitHub 仓库**：https://github.com/MuWeiLiu66/stock-viewer
+- **问题反馈**：https://github.com/MuWeiLiu66/stock-viewer/issues
 - **更新日志**：查看 [CHANGELOG.md](CHANGELOG.md) 了解所有版本更新

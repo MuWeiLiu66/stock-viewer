@@ -7,12 +7,12 @@
   "icon": "icons/icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Leo-Wei105/stock-viewer.git"
+    "url": "https://github.com/MuWeiLiu66/stock-viewer.git"
   },
   "bugs": {
-    "url": "https://github.com/Leo-Wei105/stock-viewer/issues"
+    "url": "https://github.com/MuWeiLiu66/stock-viewer/issues"
   },
-  "homepage": "https://github.com/Leo-Wei105/stock-viewer#readme",
+  "homepage": "https://github.com/MuWeiLiu66/stock-viewer#readme",
   "license": "MIT",
   "packageManager": "pnpm@10.20.0",
   "engines": {
