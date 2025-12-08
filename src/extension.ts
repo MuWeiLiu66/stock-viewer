@@ -21,6 +21,9 @@ class StockViewer {
     private updateTimer: NodeJS.Timeout | undefined;
     private currentStocks: StockInfo[] = [];
     private configChangeDisposable: vscode.Disposable;
+    // 记录每个股票代码的连续失败次数，只有连续失败达到阈值才移除
+    private failureCounts: Map<string, number> = new Map();
+    private readonly MAX_FAILURE_COUNT = 5; // 连续失败5次才移除
 
     constructor() {
         this.configManager = new ConfigManager();
@@ -31,6 +34,8 @@ class StockViewer {
             if (e.affectsConfiguration('stockViewer.stockCodes')) {
                 // 当股票代码配置改变时，进行验证和修正
                 await this.configManager.validateAndFixStockCodes();
+                // 重置失败计数，因为配置已变更
+                this.failureCounts.clear();
             }
             if (e.affectsConfiguration('stockViewer')) {
                 // 只有在相关配置变化时才重新启动，避免不必要的重启
@@ -49,10 +54,7 @@ class StockViewer {
                 // 检查是否有相关配置变化
                 const hasRelevantChange = affectedKeys.some(key => e.affectsConfiguration(key));
                 
-                // showStatusBar配置变化只需要刷新显示，不需要重启定时器
-                if (e.affectsConfiguration('stockViewer.showStatusBar')) {
-                    this.updateStatusBar();
-                } else if (hasRelevantChange) {
+                if (hasRelevantChange) {
                     this.start();
                 } else {
                     // 其他配置变化（如showNotifications）只需要刷新显示，不需要重启定时器
@@ -64,15 +66,6 @@ class StockViewer {
 
     private async updateStatusBar(): Promise<void> {
         const config = this.configManager.get();
-        
-        // 根据配置决定是否显示状态栏
-        if (!config.showStatusBar) {
-            this.statusBarManager.setVisibility(false);
-            return;
-        }
-        
-        // 如果配置为显示状态栏，先设置为可见
-        this.statusBarManager.setVisibility(true);
         
         if (config.stockCodes.length === 0) {
             this.statusBarManager.showNotConfigured(config.showStockName);
@@ -119,30 +112,72 @@ class StockViewer {
                     this.statusBarManager.showError('$(error)', false, tooltip);
                 }
                 this.currentStocks = [];
+                // 全部失败时，增加所有股票的失败计数
+                for (const code of config.stockCodes) {
+                    const count = this.failureCounts.get(code) || 0;
+                    this.failureCounts.set(code, count + 1);
+                }
                 return;
             }
 
-            // 检查是否有股票找不到，并自动移除
+            // 检查是否有股票找不到，使用失败计数机制避免误删
             if (stocks.length < config.stockCodes.length) {
-                const successCodes = stocks.map(s => s.code.toLowerCase());
+                const successCodes = new Set<string>();
+                // 使用规范化后的代码进行匹配，确保一致性
+                for (const stock of stocks) {
+                    const normalized = normalizeStockCodes([stock.code])[0];
+                    successCodes.add(normalized.toLowerCase());
+                }
+
                 const notFoundStocks: string[] = [];
+                const toRemoveStocks: string[] = [];
                 
                 // 找出哪些股票没有获取到数据
                 for (const originalCode of config.stockCodes) {
                     const normalized = normalizeStockCodes([originalCode])[0];
-                    if (!successCodes.includes(normalized.toLowerCase())) {
+                    const normalizedLower = normalized.toLowerCase();
+                    
+                    if (!successCodes.has(normalizedLower)) {
+                        // 没有获取到数据，增加失败计数
+                        const currentCount = this.failureCounts.get(originalCode) || 0;
+                        const newCount = currentCount + 1;
+                        this.failureCounts.set(originalCode, newCount);
+                        
                         notFoundStocks.push(originalCode);
+
+                        // 只有连续失败达到阈值才标记为需要移除
+                        if (newCount >= this.MAX_FAILURE_COUNT) {
+                            toRemoveStocks.push(originalCode);
+                        }
+                    } else {
+                        // 成功获取到数据，重置失败计数
+                        this.failureCounts.delete(originalCode);
                     }
                 }
-                
-                if (notFoundStocks.length > 0) {
-                    // 从配置中移除找不到的股票
-                    const validStockCodes = config.stockCodes.filter(code => !notFoundStocks.includes(code));
+
+                // 只移除连续失败达到阈值的股票
+                if (toRemoveStocks.length > 0) {
+                    // 从配置中移除连续失败的股票
+                    const validStockCodes = config.stockCodes.filter(code => !toRemoveStocks.includes(code));
                     await this.configManager.updateStockCodes(validStockCodes);
                     
+                    // 清除已移除股票的失败计数
+                    for (const code of toRemoveStocks) {
+                        this.failureCounts.delete(code);
+                    }
+                    
                     // 提示用户
-                    const message = `以下股票代码无效已自动移除: ${notFoundStocks.join(', ')}`;
+                    const message = `以下股票代码连续${this.MAX_FAILURE_COUNT}次获取失败已自动移除: ${toRemoveStocks.join(', ')}`;
                     vscode.window.showWarningMessage(message);
+                } else if (notFoundStocks.length > 0) {
+                    // 有股票暂时获取失败，但未达到移除阈值，不提示用户（避免打扰）
+                    // 只在控制台记录，方便调试
+                    console.log(`以下股票暂时获取失败（失败次数未达阈值）: ${notFoundStocks.join(', ')}`);
+                }
+            } else {
+                // 所有股票都成功获取，清除所有失败计数
+                for (const code of config.stockCodes) {
+                    this.failureCounts.delete(code);
                 }
             }
 
@@ -196,8 +231,6 @@ class StockViewer {
             // 如果启用了收盘时间停止更新，且当前不在交易时间，则不设置定时器
             if (config.stopOnMarketClose && !isMarketOpen()) {
                 // 不设置定时器，避免非交易时间时的无效更新
-                // 但需要更新状态栏显示"休市中"图标
-                this.updateStatusBar();
                 return;
             }
             
@@ -209,8 +242,6 @@ class StockViewer {
                         clearInterval(this.updateTimer);
                         this.updateTimer = undefined;
                     }
-                    // 更新状态栏显示"休市中"图标
-                    this.updateStatusBar();
                     return;
                 }
                 // 如果禁用了自动更新，也清除定时器
@@ -533,14 +564,6 @@ function registerCommands(context: vscode.ExtensionContext) {
             const statusText = newValue ? '已开启' : '已关闭';
             // 这个命令总是显示提示，因为用户需要知道切换结果
             vscode.window.showInformationMessage(`提示气泡${statusText}`);
-        }),
-
-        vscode.commands.registerCommand('stockViewer.toggleShowStatusBar', async () => {
-            const newValue = await configManager.toggleShowStatusBar();
-            const statusText = newValue ? '已显示' : '已隐藏';
-            showNotification(`状态栏股票信息${statusText}`);
-            // 立即刷新一次以应用新设置
-            stockViewer.refresh();
         }),
 
         { dispose: () => stockViewer.dispose() }
