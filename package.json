@@ -101,6 +101,11 @@
         "command": "stockViewer.toggleShowStatusBar",
         "title": "股票: 切换状态栏显示",
         "category": "Stock Viewer"
+      },
+      {
+        "command": "stockViewer.setPosition",
+        "title": "股票: 设置持仓信息",
+        "category": "Stock Viewer"
       }
     ],
     "keybindings": [
@@ -247,6 +252,41 @@
           "default": false,
           "order": 30,
           "markdownDescription": "**通知设置** - 操作时是否显示提示气泡（如切换显示、添加股票等）",
+          "scope": "application"
+        },
+        "stockViewer.positions": {
+          "type": "object",
+          "default": {},
+          "order": 40,
+          "markdownDescription": "**持仓设置** - 持仓信息，格式：`{\"股票代码\": {\"costPrice\": 持仓价格, \"quantity\": 持仓数量（手）}}`。例如：`{\"sz000001\": {\"costPrice\": 10.5, \"quantity\": 10}}`（10手=1000股，1手=100股）",
+          "scope": "application",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "costPrice": {
+                "type": "number",
+                "description": "持仓价格"
+              },
+              "quantity": {
+                "type": "number",
+                "description": "持仓数量（单位：手，1手=100股）"
+              }
+            },
+            "required": ["costPrice", "quantity"]
+          }
+        },
+        "stockViewer.showProfitLoss": {
+          "type": "boolean",
+          "default": false,
+          "order": 15,
+          "markdownDescription": "**显示设置** - 在状态栏显示参考盈利/亏损金额（需要先设置持仓信息）",
+          "scope": "application"
+        },
+        "stockViewer.autoSetPositionOnAdd": {
+          "type": "boolean",
+          "default": false,
+          "order": 41,
+          "markdownDescription": "**持仓设置** - 添加股票后自动调用设置持仓（开启后，添加股票时会自动弹出设置持仓对话框）",
           "scope": "application"
         }
       }

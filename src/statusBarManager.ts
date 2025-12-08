@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { StockInfo } from './stockDataService';
-import { formatVolume, formatVolumeByCode, formatTurnover, formatChangePercent, formatChangeAmount } from './utils';
+import { PositionInfo } from './config';
+import { formatVolume, formatVolumeByCode, formatTurnover, formatChangePercent, formatChangeAmount, formatProfitLoss, formatProfitLossPercent } from './utils';
 
 export class StatusBarManager {
     private settingsBarItem!: vscode.StatusBarItem;
@@ -158,7 +159,9 @@ export class StatusBarManager {
         showChangePercent: boolean,
         colorfulDisplay: boolean,
         alignment: 'left' | 'right',
-        dataSource: string
+        dataSource: string,
+        positions: Record<string, PositionInfo>,
+        showProfitLoss: boolean
     ): void {
         this.updateAlignmentIfNeeded(alignment);
         this.settingsBarItem.show();
@@ -170,6 +173,9 @@ export class StatusBarManager {
             const stock = stocks[i];
             const item = this.stockBarItems[i];
             const parts: string[] = [];
+            
+            // 获取持仓信息
+            const position = positions[stock.code.toLowerCase()];
             
             // 添加股票名称
             if (showStockName) {
@@ -187,6 +193,14 @@ export class StatusBarManager {
                 parts.push(percentStr);
             }
             
+            // 如果有持仓信息且配置开启，添加盈利/亏损
+            if (position && showProfitLoss) {
+                // quantity 是手数，需要转换为股数（1手=100股）
+                const profitLoss = (stock.currentPrice - position.costPrice) * position.quantity * 100;
+                const profitLossStr = formatProfitLoss(profitLoss);
+                parts.push(`(${profitLossStr})`);
+            }
+            
             // 如果价格和涨跌幅都不显示，只显示箭头
             if (!showPrice && !showChangePercent) {
                 const percent = parseFloat(stock.changePercent);
@@ -195,7 +209,7 @@ export class StatusBarManager {
             }
             
             const newText = parts.join(' ');
-            const newTooltip = this.createSingleStockTooltip(stock, dataSource);
+            const newTooltip = this.createSingleStockTooltip(stock, dataSource, position);
             
             // 只更新变化的内容，避免不必要的重绘
             let needsUpdate = false;
@@ -274,7 +288,7 @@ export class StatusBarManager {
         }
     }
     
-    private createSingleStockTooltip(stock: StockInfo, dataSource: string): vscode.MarkdownString {
+    private createSingleStockTooltip(stock: StockInfo, dataSource: string, position?: PositionInfo): vscode.MarkdownString {
         const md = new vscode.MarkdownString();
         const dataSourceName = dataSource === 'sina' ? '新浪财经' : '腾讯财经';
         
@@ -284,6 +298,20 @@ export class StatusBarManager {
         md.appendMarkdown(`| **当前价** | **${stock.currentPrice.toFixed(2)}** |\n`);
         md.appendMarkdown(`| 涨跌额 | ${formatChangeAmount(stock.changeAmount)} |\n`);
         md.appendMarkdown(`| 涨跌幅 | ${formatChangePercent(stock.changePercent)} |\n`);
+        
+        // 如果有持仓信息，直接添加到主表格中
+        if (position) {
+            // quantity 是手数，需要转换为股数（1手=100股）
+            const profitLoss = (stock.currentPrice - position.costPrice) * position.quantity * 100;
+            const profitLossPercent = position.costPrice > 0 
+                ? ((stock.currentPrice - position.costPrice) / position.costPrice * 100)
+                : 0;
+            md.appendMarkdown(`| 持仓价格 | ${position.costPrice.toFixed(2)} |\n`);
+            md.appendMarkdown(`| 持仓数量 | ${position.quantity} 手 |\n`);
+            md.appendMarkdown(`| **参考盈利/亏损** | **${formatProfitLoss(profitLoss)}** |\n`);
+            md.appendMarkdown(`| 盈亏比例 | ${formatProfitLossPercent(profitLossPercent)} |\n`);
+        }
+        
         md.appendMarkdown(`| 昨收价 | ${stock.yesterdayClose.toFixed(2)} |\n`);
         md.appendMarkdown(`| 今开盘 | ${stock.todayOpen.toFixed(2)} |\n`);
         md.appendMarkdown(`| 今日最高 | ${stock.todayHigh.toFixed(2)} |\n`);

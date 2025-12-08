@@ -1,5 +1,10 @@
 import * as vscode from 'vscode';
 
+export interface PositionInfo {
+    costPrice: number;  // 持仓价格
+    quantity: number;   // 持仓数量（单位：手，1手=100股）
+}
+
 export interface StockViewerConfig {
     stockCodes: string[];
     dataSource: 'tencent' | 'sina';
@@ -13,6 +18,9 @@ export interface StockViewerConfig {
     showNotifications: boolean;
     stopOnMarketClose: boolean;
     enableAutoUpdate: boolean;
+    positions: Record<string, PositionInfo>;  // 持仓信息，key为股票代码（规范化后）
+    showProfitLoss: boolean;  // 是否在状态栏显示盈利/亏损
+    autoSetPositionOnAdd: boolean;  // 添加股票后是否自动调用设置持仓
 }
 
 export class ConfigManager {
@@ -20,6 +28,18 @@ export class ConfigManager {
     
     public get(): StockViewerConfig {
         const config = vscode.workspace.getConfiguration(ConfigManager.SECTION);
+        const positions = config.get<Record<string, PositionInfo>>('positions', {});
+        // 验证持仓信息格式
+        const validatedPositions: Record<string, PositionInfo> = {};
+        for (const [code, pos] of Object.entries(positions)) {
+            if (pos && typeof pos.costPrice === 'number' && typeof pos.quantity === 'number' && 
+                pos.costPrice > 0 && pos.quantity > 0) {
+                validatedPositions[code.toLowerCase()] = {
+                    costPrice: pos.costPrice,
+                    quantity: pos.quantity
+                };
+            }
+        }
         return {
             stockCodes: config.get<string[]>('stockCodes', []),
             dataSource: config.get<'tencent' | 'sina'>('dataSource', 'tencent'),
@@ -32,7 +52,10 @@ export class ConfigManager {
             updateInterval: Math.min(Math.max(config.get<number>('updateInterval', 8), 3), 1800) * 1000, // 限制在3-1800秒之间（30分钟）
             showNotifications: config.get<boolean>('showNotifications', false),
             stopOnMarketClose: config.get<boolean>('stopOnMarketClose', false),
-            enableAutoUpdate: config.get<boolean>('enableAutoUpdate', true)
+            enableAutoUpdate: config.get<boolean>('enableAutoUpdate', true),
+            positions: validatedPositions,
+            showProfitLoss: config.get<boolean>('showProfitLoss', false),
+            autoSetPositionOnAdd: config.get<boolean>('autoSetPositionOnAdd', false)
         };
     }
     
@@ -254,6 +277,47 @@ export class ConfigManager {
         return false;
     }
     
+    /**
+     * 获取指定股票的持仓信息
+     * @param code 股票代码（会自动规范化）
+     * @returns 持仓信息，如果没有则返回null
+     */
+    public getPosition(code: string): PositionInfo | null {
+        const config = this.get();
+        const normalizedCode = code.toLowerCase();
+        return config.positions[normalizedCode] || null;
+    }
+
+    /**
+     * 设置指定股票的持仓信息
+     * @param code 股票代码（会自动规范化）
+     * @param costPrice 持仓价格
+     * @param quantity 持仓数量（单位：手，1手=100股）
+     */
+    public async setPosition(code: string, costPrice: number, quantity: number): Promise<void> {
+        if (costPrice <= 0 || quantity <= 0) {
+            throw new Error('持仓价格和数量必须大于0');
+        }
+        
+        const config = this.get();
+        const normalizedCode = code.toLowerCase();
+        const newPositions = { ...config.positions };
+        newPositions[normalizedCode] = { costPrice, quantity };
+        await this.update('positions', newPositions);
+    }
+
+    /**
+     * 删除指定股票的持仓信息
+     * @param code 股票代码（会自动规范化）
+     */
+    public async removePosition(code: string): Promise<void> {
+        const config = this.get();
+        const normalizedCode = code.toLowerCase();
+        const newPositions = { ...config.positions };
+        delete newPositions[normalizedCode];
+        await this.update('positions', newPositions);
+    }
+
     private async update(key: string, value: any): Promise<void> {
         const config = vscode.workspace.getConfiguration(ConfigManager.SECTION);
         await config.update(key, value, vscode.ConfigurationTarget.Global);

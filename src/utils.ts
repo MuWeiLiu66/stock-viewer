@@ -232,6 +232,23 @@ export function formatChangeAmount(amount: number): string {
     return amount >= 0 ? `+${amount.toFixed(2)}` : amount.toFixed(2);
 }
 
+// 格式化盈利/亏损金额
+export function formatProfitLoss(profitLoss: number): string {
+    const sign = profitLoss >= 0 ? '+' : '';
+    if (Math.abs(profitLoss) >= 100000000) {
+        return `${sign}${(profitLoss / 100000000).toFixed(2)}亿元`;
+    } else if (Math.abs(profitLoss) >= 10000) {
+        return `${sign}${(profitLoss / 10000).toFixed(2)}万元`;
+    }
+    return `${sign}${profitLoss.toFixed(2)}元`;
+}
+
+// 格式化盈利/亏损百分比
+export function formatProfitLossPercent(profitLossPercent: number): string {
+    const sign = profitLossPercent >= 0 ? '+' : '';
+    return `${sign}${profitLossPercent.toFixed(2)}%`;
+}
+
 /**
  * 通过API返回的数据时间戳判断市场是否开盘
  * @param dataTimestamp API返回的数据时间戳

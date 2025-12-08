@@ -5,7 +5,7 @@ import { StockItem, fetchAllStocks } from './stockDatabase';
 import { ConfigManager } from './config';
 import { StockDataService, StockInfo } from './stockDataService';
 import { StatusBarManager } from './statusBarManager';
-import { formatVolume, formatVolumeByCode, formatTurnover, formatChangePercent, formatChangeAmount, getStockPrefix, MIN_UPDATE_INTERVAL, CACHE_EXPIRY_DAYS, MIN_EXPECTED_STOCKS, isMarketOpen, isMarketOpenByData } from './utils';
+import { formatVolume, formatVolumeByCode, formatTurnover, formatChangePercent, formatChangeAmount, formatProfitLoss, formatProfitLossPercent, getStockPrefix, MIN_UPDATE_INTERVAL, CACHE_EXPIRY_DAYS, MIN_EXPECTED_STOCKS, isMarketOpen, isMarketOpenByData } from './utils';
 
 interface StockQuickPickItem extends vscode.QuickPickItem {
     stock: StockItem | null;
@@ -48,7 +48,8 @@ class StockViewer {
                     'stockViewer.showChangePercent',
                     'stockViewer.colorfulDisplay',
                     'stockViewer.alignment',
-                    'stockViewer.dataSource'
+                    'stockViewer.dataSource',
+                    'stockViewer.showProfitLoss'
                 ];
                 
                 // 检查是否有相关配置变化
@@ -189,7 +190,9 @@ class StockViewer {
                 config.showChangePercent,
                 config.colorfulDisplay,
                 config.alignment,
-                config.dataSource
+                config.dataSource,
+                config.positions,
+                config.showProfitLoss
             );
         } catch (error) {
             console.error('更新股票信息失败:', error);
@@ -566,6 +569,97 @@ function registerCommands(context: vscode.ExtensionContext) {
             vscode.window.showInformationMessage(`提示气泡${statusText}`);
         }),
 
+        vscode.commands.registerCommand('stockViewer.setPosition', async () => {
+            const config = configManager.get();
+            
+            if (config.stockCodes.length === 0) {
+                vscode.window.showInformationMessage('请先添加股票');
+                return;
+            }
+
+            // 获取当前股票信息用于显示
+            const currentStocks = stockViewer.getCurrentStocks();
+            
+            // 创建快速选择项
+            const items = config.stockCodes.map((code) => {
+                const stockInfo = currentStocks.find(s => {
+                    const normalized = normalizeStockCodes([code]);
+                    return s.code === normalized[0] || s.code === code;
+                });
+                const position = configManager.getPosition(code);
+                
+                return {
+                    label: stockInfo?.name || code,
+                    description: code,
+                    detail: stockInfo 
+                        ? `当前价: ${stockInfo.currentPrice.toFixed(2)}${position ? ` | 持仓: ${position.costPrice.toFixed(2)} × ${position.quantity}手` : ''}` 
+                        : undefined,
+                    code: code
+                };
+            });
+
+            const selected = await vscode.window.showQuickPick(items, {
+                placeHolder: '选择要设置持仓的股票',
+                canPickMany: false
+            });
+
+            if (!selected) {
+                return;
+            }
+
+            // 获取当前持仓信息（如果有）
+            const currentPosition = configManager.getPosition(selected.code);
+            
+            // 输入持仓价格
+            const costPriceInput = await vscode.window.showInputBox({
+                prompt: '请输入持仓价格',
+                value: currentPosition ? currentPosition.costPrice.toString() : '',
+                validateInput: (value) => {
+                    const num = parseFloat(value);
+                    if (isNaN(num) || num <= 0) {
+                        return '请输入大于0的数字';
+                    }
+                    return null;
+                }
+            });
+
+            if (costPriceInput === undefined) {
+                return;
+            }
+
+            // 输入持仓数量
+            const quantityInput = await vscode.window.showInputBox({
+                prompt: '请输入持仓数量（手，1手=100股）',
+                value: currentPosition ? currentPosition.quantity.toString() : '',
+                validateInput: (value) => {
+                    const num = parseFloat(value);
+                    if (isNaN(num) || num <= 0 || !Number.isInteger(num)) {
+                        return '请输入大于0的整数';
+                    }
+                    return null;
+                }
+            });
+
+            if (quantityInput === undefined) {
+                return;
+            }
+
+            const costPrice = parseFloat(costPriceInput);
+            const quantity = parseInt(quantityInput, 10);
+
+            try {
+                // 规范化股票代码
+                const normalizedCodes = normalizeStockCodes([selected.code]);
+                const normalizedCode = normalizedCodes[0] || selected.code;
+                await configManager.setPosition(normalizedCode, costPrice, quantity);
+                showNotification(`已设置 ${selected.label} 的持仓：${costPrice.toFixed(2)} × ${quantity}手`);
+                // 刷新显示以更新盈利/亏损
+                stockViewer.refresh();
+            } catch (error) {
+                vscode.window.showErrorMessage(`设置持仓失败: ${error instanceof Error ? error.message : String(error)}`);
+            }
+        }),
+
         { dispose: () => stockViewer.dispose() }
     );
 }
@@ -678,6 +772,34 @@ function showStockDetails(stocks: StockInfo[]): void {
     // 卡片视图
     const formatStockCard = (stock: StockInfo): string => {
         const changeColor = useColor ? (stock.changeAmount >= 0 ? '#ff0000' : '#00aa00') : '#000';
+        const position = config.positions[stock.code.toLowerCase()];
+        let profitLossRows = '';
+        if (position) {
+            // quantity 是手数，需要转换为股数（1手=100股）
+            const profitLoss = (stock.currentPrice - position.costPrice) * position.quantity * 100;
+            const profitLossPercent = position.costPrice > 0 
+                ? ((stock.currentPrice - position.costPrice) / position.costPrice * 100)
+                : 0;
+            const profitLossColor = profitLoss >= 0 ? '#ff0000' : '#00aa00';
+            profitLossRows = `
+                    <div class="info-row">
+                        <span class="label">持仓价格</span>
+                        <span class="value">${position.costPrice.toFixed(2)}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">持仓数量</span>
+                        <span class="value">${position.quantity} 手</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">参考盈利/亏损</span>
+                        <span class="value" style="color: ${useColor ? profitLossColor : '#000'}; font-weight: bold;">${formatProfitLoss(profitLoss)}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">盈亏比例</span>
+                        <span class="value" style="color: ${useColor ? profitLossColor : '#000'};">${formatProfitLossPercent(profitLossPercent)}</span>
+                    </div>
+            `;
+        }
         return `
             <div class="stock-card">
                 <div class="stock-header">
@@ -689,6 +811,7 @@ function showStockDetails(stocks: StockInfo[]): void {
                     <span class="stock-change">${formatChangeAmount(stock.changeAmount)} (${formatChangePercent(stock.changePercent)})</span>
                 </div>
                 <div class="stock-info">
+                    ${profitLossRows}
                     <div class="info-row">
                         <span class="label">昨收价</span>
                         <span class="value">${stock.yesterdayClose.toFixed(2)}</span>
@@ -725,6 +848,22 @@ function showStockDetails(stocks: StockInfo[]): void {
     const formatStockTable = (): string => {
         const rows = stocks.map(stock => {
             const changeColor = useColor ? (stock.changeAmount >= 0 ? '#ff0000' : '#00aa00') : '#000';
+            const position = config.positions[stock.code.toLowerCase()];
+            let positionHtml = '<td>-</td><td>-</td><td>-</td><td>-</td>';
+            if (position) {
+                // quantity 是手数，需要转换为股数（1手=100股）
+                const profitLoss = (stock.currentPrice - position.costPrice) * position.quantity * 100;
+                const profitLossPercent = position.costPrice > 0 
+                    ? ((stock.currentPrice - position.costPrice) / position.costPrice * 100)
+                    : 0;
+                const profitLossColor = useColor ? (profitLoss >= 0 ? '#ff0000' : '#00aa00') : '#000';
+                positionHtml = `
+                    <td>${position.costPrice.toFixed(2)}</td>
+                    <td>${position.quantity} 手</td>
+                    <td style="color: ${profitLossColor}; font-weight: bold;">${formatProfitLoss(profitLoss)}</td>
+                    <td style="color: ${profitLossColor};">${formatProfitLossPercent(profitLossPercent)}</td>
+                `;
+            }
             return `
                 <tr>
                     <td>${stock.name}</td>
@@ -732,6 +871,7 @@ function showStockDetails(stocks: StockInfo[]): void {
                     <td style="color: ${changeColor}; font-weight: bold;">${stock.currentPrice.toFixed(2)}</td>
                     <td style="color: ${changeColor};">${formatChangeAmount(stock.changeAmount)}</td>
                     <td style="color: ${changeColor};">${formatChangePercent(stock.changePercent)}</td>
+                    ${positionHtml}
                     <td>${stock.yesterdayClose.toFixed(2)}</td>
                     <td>${stock.todayOpen.toFixed(2)}</td>
                     <td>${stock.todayHigh.toFixed(2)}</td>
@@ -752,6 +892,10 @@ function showStockDetails(stocks: StockInfo[]): void {
                         <th>当前价</th>
                         <th>涨跌额</th>
                         <th>涨跌幅</th>
+                        <th>持仓价格</th>
+                        <th>持仓数量</th>
+                        <th>参考盈利/亏损</th>
+                        <th>盈亏比例</th>
                         <th>昨收价</th>
                         <th>今开盘</th>
                         <th>今日最高</th>
@@ -999,6 +1143,67 @@ async function addStockToConfig(stockCode: string): Promise<void> {
     const stock = stockDatabase.find(s => s.code === stockCode);
     const stockName = stock?.name || stockCode;
     showNotification(`已添加股票: ${stockName} (${stockCode})`);
+    
+    // 如果配置了自动设置持仓，自动调用设置持仓命令
+    const config = configManager.get();
+    if (config.autoSetPositionOnAdd) {
+        // 规范化股票代码
+        const normalizedCodes = normalizeStockCodes([stockCode]);
+        const normalizedCode = normalizedCodes[0] || stockCode;
+        
+        // 延迟一下，确保股票已添加完成
+        setTimeout(async () => {
+            try {
+                // 获取当前持仓信息（如果有）
+                const currentPosition = configManager.getPosition(normalizedCode);
+                
+                // 输入持仓价格
+                const costPriceInput = await vscode.window.showInputBox({
+                    prompt: `请输入 ${stockName} 的持仓价格`,
+                    value: currentPosition ? currentPosition.costPrice.toString() : '',
+                    validateInput: (value) => {
+                        const num = parseFloat(value);
+                        if (isNaN(num) || num <= 0) {
+                            return '请输入大于0的数字';
+                        }
+                        return null;
+                    }
+                });
+
+                if (costPriceInput === undefined) {
+                    return;
+                }
+
+                // 输入持仓数量
+                const quantityInput = await vscode.window.showInputBox({
+                    prompt: `请输入 ${stockName} 的持仓数量（手，1手=100股）`,
+                    value: currentPosition ? currentPosition.quantity.toString() : '',
+                    validateInput: (value) => {
+                        const num = parseFloat(value);
+                        if (isNaN(num) || num <= 0 || !Number.isInteger(num)) {
+                            return '请输入大于0的整数';
+                        }
+                        return null;
+                    }
+                });
+
+                if (quantityInput === undefined) {
+                    return;
+                }
+
+                const costPrice = parseFloat(costPriceInput);
+                const quantity = parseInt(quantityInput, 10);
+
+                await configManager.setPosition(normalizedCode, costPrice, quantity);
+                showNotification(`已设置 ${stockName} 的持仓：${costPrice.toFixed(2)} × ${quantity}手`);
+                // 刷新显示以更新盈利/亏损
+                stockViewer.refresh();
+            } catch (error) {
+                // 如果用户取消或出错，不显示错误提示（避免打扰）
+                console.log('自动设置持仓失败或已取消:', error);
+            }
+        }, 100);
+    }
 }
 
 export function deactivate() {
