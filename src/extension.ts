@@ -245,6 +245,8 @@ class StockViewer {
                         clearInterval(this.updateTimer);
                         this.updateTimer = undefined;
                     }
+                    // 更新状态栏显示"休市中"
+                    this.updateStatusBar();
                     return;
                 }
                 // 如果禁用了自动更新，也清除定时器
