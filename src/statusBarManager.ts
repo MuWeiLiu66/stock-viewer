@@ -273,7 +273,13 @@ export class StatusBarManager {
     }
     
     private hideAllStockItems(): void {
-        this.stockBarItems.forEach(item => item.hide());
+        // 隐藏时同时清空文本，避免后续 updateStocks 因为文本未变而不再调用 show()
+        this.stockBarItems.forEach(item => {
+            item.hide();
+            item.text = '';
+            item.tooltip = undefined;
+            item.color = undefined;
+        });
     }
     
     public setVisibility(visible: boolean): void {

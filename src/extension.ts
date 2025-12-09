@@ -19,6 +19,7 @@ class StockViewer {
     private dataService: StockDataService;
     private statusBarManager: StatusBarManager;
     private updateTimer: NodeJS.Timeout | undefined;
+    private resumeTimer: NodeJS.Timeout | undefined;
     private currentStocks: StockInfo[] = [];
     private configChangeDisposable: vscode.Disposable;
     // 记录每个股票代码的连续失败次数，只有连续失败达到阈值才移除
@@ -67,6 +68,14 @@ class StockViewer {
 
     private async updateStatusBar(): Promise<void> {
         const config = this.configManager.get();
+
+        // 根据配置控制状态栏可见性（保留设置图标）
+        this.statusBarManager.setVisibility(config.showStatusBar);
+        if (!config.showStatusBar) {
+            // 隐藏状态栏时不再继续更新股票显示
+            this.currentStocks = [];
+            return;
+        }
         
         if (config.stockCodes.length === 0) {
             this.statusBarManager.showNotConfigured(config.showStockName);
@@ -224,6 +233,10 @@ class StockViewer {
             clearInterval(this.updateTimer);
             this.updateTimer = undefined;
         }
+        if (this.resumeTimer) {
+            clearTimeout(this.resumeTimer);
+            this.resumeTimer = undefined;
+        }
 
         // 立即更新一次显示
         this.updateStatusBar();
@@ -233,6 +246,7 @@ class StockViewer {
         if (config.enableAutoUpdate) {
             // 如果启用了收盘时间停止更新，且当前不在交易时间，则不设置定时器
             if (config.stopOnMarketClose && !isMarketOpen()) {
+                this.scheduleResume();
                 // 不设置定时器，避免非交易时间时的无效更新
                 return;
             }
@@ -247,6 +261,7 @@ class StockViewer {
                     }
                     // 更新状态栏显示"休市中"
                     this.updateStatusBar();
+                    this.scheduleResume();
                     return;
                 }
                 // 如果禁用了自动更新，也清除定时器
@@ -267,6 +282,10 @@ class StockViewer {
             clearInterval(this.updateTimer);
             this.updateTimer = undefined;
         }
+        if (this.resumeTimer) {
+            clearTimeout(this.resumeTimer);
+            this.resumeTimer = undefined;
+        }
         this.statusBarManager.hide();
     }
 
@@ -274,6 +293,27 @@ class StockViewer {
         this.stop();
         this.configChangeDisposable.dispose();
         this.statusBarManager.dispose();
+    }
+
+    // 在收盘期间安排下一次开盘自动恢复
+    private scheduleResume(): void {
+        const config = this.configManager.get();
+        if (!config.enableAutoUpdate || !config.stopOnMarketClose) {
+            return;
+        }
+
+        const delay = getNextMarketOpenDelay();
+        if (delay <= 0) {
+            return;
+        }
+
+        if (this.resumeTimer) {
+            clearTimeout(this.resumeTimer);
+        }
+        this.resumeTimer = setTimeout(() => {
+            this.resumeTimer = undefined;
+            this.start();
+        }, delay);
     }
 }
 
@@ -422,6 +462,13 @@ function registerCommands(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('stockViewer.toggleColorfulDisplay', async () => {
             const newValue = await configManager.toggleColorfulDisplay();
             showNotification(`彩色显示已${newValue ? '开启' : '关闭'}`);
+        }),
+
+        vscode.commands.registerCommand('stockViewer.toggleShowStatusBar', async () => {
+            const newValue = await configManager.toggleShowStatusBar();
+            showNotification(`状态栏显示已${newValue ? '开启' : '隐藏'}`);
+            // 立即刷新以应用显示状态
+            stockViewer.refresh();
         }),
 
         vscode.commands.registerCommand('stockViewer.switchDataSource', async () => {
@@ -719,6 +766,57 @@ function normalizeStockCodes(codes: string[]): string[] {
     return [...new Set(normalized)];
 }
 
+// 计算距离下一次开盘的毫秒数（交易日 9:15 或 13:00）
+function getNextMarketOpenDelay(): number {
+    const now = new Date();
+    const sessions = [
+        { start: 915, end: 1130 },
+        { start: 1300, end: 1500 }
+    ];
+
+    const isWeekend = (d: Date) => d.getDay() === 0 || d.getDay() === 6;
+
+    const buildDate = (date: Date, hhmm: number) => {
+        const h = Math.floor(hhmm / 100);
+        const m = hhmm % 100;
+        const target = new Date(date);
+        target.setHours(h, m, 0, 0);
+        return target;
+    };
+
+    let candidate = new Date(now);
+    // 如果是周末，跳到下一个工作日
+    while (isWeekend(candidate)) {
+        candidate.setDate(candidate.getDate() + 1);
+        candidate.setHours(9, 15, 0, 0);
+    }
+
+    const currentHHMM = now.getHours() * 100 + now.getMinutes();
+
+    // 当天还没到 9:15
+    if (currentHHMM < sessions[0].start) {
+        const target = buildDate(candidate, sessions[0].start);
+        return Math.max(target.getTime() - now.getTime(), 0);
+    }
+
+    // 午间休市 11:30-13:00
+    if (currentHHMM > sessions[0].end && currentHHMM < sessions[1].start) {
+        const target = buildDate(candidate, sessions[1].start);
+        return Math.max(target.getTime() - now.getTime(), 0);
+    }
+
+    // 当天交易结束，跳到下一个工作日 9:15
+    if (currentHHMM >= sessions[1].end) {
+        do {
+            candidate.setDate(candidate.getDate() + 1);
+        } while (isWeekend(candidate));
+        const target = buildDate(candidate, sessions[0].start);
+        return Math.max(target.getTime() - now.getTime(), 0);
+    }
+
+    // 其他情况（理论上已覆盖），默认1分钟后再试
+    return 60 * 1000;
+}
 function searchStocks(keyword: string): StockItem[] {
     const trimmedKeyword = keyword.trim();
     if (!trimmedKeyword) return [];
