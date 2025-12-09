@@ -5,6 +5,15 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.2.4] - 2025-12-09
+
+### 修复
+- 修复命令 `stockViewer.toggleShowStatusBar` 未注册导致无法切换状态栏显示的问题
+- 修复隐藏状态栏后再次显示时股票信息不出现的问题（隐藏时清空状态栏缓存以确保重新渲染）
+
+### 改进
+- 收盘停止更新开启时，自动安排下一次开盘（含午间休市和跨日、跳过周末）自动恢复请求，无需手动干预
+
 ## [0.2.2] - 2025-12-08
 
 ### 修复
@@ -165,6 +174,7 @@
 - **[移除]**：已移除的功能
 
 [0.2.2]: https://github.com/MuWeiLiu66/stock-viewer/compare/v0.2.0...v0.2.2
+[0.2.4]: https://github.com/MuWeiLiu66/stock-viewer/compare/v0.2.2...v0.2.4
 [0.2.0]: https://github.com/MuWeiLiu66/stock-viewer/compare/v0.1.5...v0.2.0
 [0.1.5]: https://github.com/MuWeiLiu66/stock-viewer/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/MuWeiLiu66/stock-viewer/compare/v0.1.3...v0.1.4
